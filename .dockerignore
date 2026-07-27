@@ -1,0 +1,11 @@
+# Keep the Docker build context small and predictable.
+.git
+.venv
+__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.env
+.env.*
+tests
+docs

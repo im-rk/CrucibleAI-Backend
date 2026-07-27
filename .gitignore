@@ -1,0 +1,23 @@
+# Python bytecode and caches.
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments and uv artifacts.
+.venv/
+
+# Local configuration.
+.env
+.env.*
+!.env.example
+
+# OS and editor cruft.
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Application data.
+
