@@ -1,10 +1,19 @@
 """Embedding generation for paper chunks and retrieved records."""
 
-# from __future__ import annotations
+import logging
+from sentence_transformers import SentenceTransformer
 
+logger = logging.getLogger(__name__)
 
-# class Embedder:
-#     """Placeholder sentence-transformers adapter."""
+class MaterialsEmbedder:
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+        logger.info(f"Loading embedding model: {model_name}")
+        self.model = SentenceTransformer(model_name)
 
-#     def embed(self, texts: list[str]) -> list[list[float]]:
-#         return [[0.0] * 3 for _ in texts]
+    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        return self.model.encode(
+            texts, batch_size=32, show_progress_bar=False, normalize_embeddings=True
+        ).tolist()
+    
