@@ -1,25 +1,27 @@
 """Pydantic models that define the API and internal data contracts."""
 
-# from __future__ import annotations
+from datetime import datetime
+from typing import Optional
+from pydantic import BaseModel,Field
 
-# from datetime import datetime
+class PaperMetadata(BaseModel):
+    """Metadata contract for an ingested paper"""
+    arxiv_id: str
+    title: str
+    authors: list[str]
+    abstract: str
+    year: int
+    doi : Optional[str] =None
+    pdf_path=Optional[str]=None
+    ingested_at:datetime =Field(default_factory=datetime.utcnow)
 
-# from pydantic import BaseModel, Field
+class PaperChunk(BaseModel):
+    """Contract for a searchable chunk stored in ChromaDb"""
 
-
-# class ResearchRequest(BaseModel):
-#     """Request payload for a research query."""
-
-#     query: str = Field(min_length=1)
-#     max_results: int = Field(default=10, ge=1, le=100)
-
-
-# class PropertyRecord(BaseModel):
-#     """Structured material property record returned by the agent."""
-
-#     material_id: str
-#     property_name: str
-#     value: float | str
-#     units: str | None = None
-#     source: str | None = None
-#     created_at: datetime = Field(default_factory=datetime.utcnow)
+    chunk_id: str
+    arxiv_id= str
+    text: str
+    section_name: str
+    chunk_index: int
+    char_count: int
+    metadata: PaperMetadata
