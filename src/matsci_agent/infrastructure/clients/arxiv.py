@@ -28,15 +28,16 @@ class ArxivClient:
     def fetch_metadata(self,max_per_query: int=10)->Iterator[PaperMetadata]:
         """Queries arXiv across materials domains and yields typed metadata objects."""
         for query in self.MATERIALS_QUERIES:
-            logger.info(f"Querying arXiv for: '{query}")
+            logger.info(f"Querying arXiv for: '{query}'")
             search=arxiv.Search(
                 query=query,
-                max_result=max_per_query,
+                max_results=max_per_query,
                 sort_by=arxiv.SortCriterion.SubmittedDate,
             )
 
             try:
-                for result in search.results():
+                client = arxiv.Client()
+                for result in client.results(search):
                     arxiv_id = result.entry_id.split("/")[-1]
                     yield PaperMetadata(
                         arxiv_id=arxiv_id,
@@ -59,9 +60,15 @@ class ArxivClient:
             return pdf_path
 
         try:
+            client = arxiv.Client()
             search = arxiv.Search(id_list=[paper.arxiv_id])
-            result = next(search.results())
-            result.download_pdf(dirpath=str(self.download_dir), filename=f"{paper.arxiv_id}.pdf")
+            result = next(client.results(search))
+            
+            import urllib.request
+            pdf_url = result.pdf_url
+            if not pdf_url.endswith(".pdf"):
+                pdf_url += ".pdf"
+            urllib.request.urlretrieve(pdf_url, str(pdf_path))
             logger.info(f"Successfully downloaded PDF: {paper.arxiv_id}")
             return pdf_path
         except Exception as exc:

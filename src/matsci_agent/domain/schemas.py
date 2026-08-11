@@ -11,15 +11,15 @@ class PaperMetadata(BaseModel):
     authors: list[str]
     abstract: str
     year: int
-    doi : Optional[str] =None
-    pdf_path=Optional[str]=None
-    ingested_at:datetime =Field(default_factory=datetime.utcnow)
+    doi : Optional[str] = None
+    pdf_path: Optional[str] = None
+    ingested_at: datetime = Field(default_factory=datetime.utcnow)
 
 class PaperChunk(BaseModel):
     """Contract for a searchable chunk stored in ChromaDb"""
 
     chunk_id: str
-    arxiv_id= str
+    arxiv_id: str
     text: str
     section_name: str
     chunk_index: int
