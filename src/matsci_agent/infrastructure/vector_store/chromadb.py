@@ -42,5 +42,33 @@ class ChromaVectorStore:
         )
         logger.info(f"Indexed {len(chunks)} chunks into ChromaDB.")
 
+    def search(
+        self,
+        query: str,
+        n_results: int = 10,
+        where: dict | None = None,
+    ) -> list[dict]:
+        """Search for relevant paper chunks using vector similarity."""
+        query_embedding = self.embedder.embed_single(query)
+
+        results = self.collection.query(
+            query_embeddings=[query_embedding],
+            n_results=n_results,
+            where=where,
+        )
+
+        chunks = []
+        if results and results.get("ids") and results["ids"][0]:
+            for i in range(len(results["ids"][0])):
+                distance = results["distances"][0][i]
+                chunks.append({
+                    "id": results["ids"][0][i],
+                    "text": results["documents"][0][i],
+                    "metadata": results["metadatas"][0][i],
+                    "distance": distance,
+                    "similarity": 1.0 - distance,
+                })
+        return chunks
+
     def count(self) -> int:
-        return self.collection.count()
+        return self.collection.count()

@@ -63,15 +63,21 @@ class ArxivClient:
             client = arxiv.Client()
             search = arxiv.Search(id_list=[paper.arxiv_id])
             result = next(client.results(search))
-            
-            import urllib.request
+
             pdf_url = result.pdf_url
             if not pdf_url.endswith(".pdf"):
                 pdf_url += ".pdf"
-            urllib.request.urlretrieve(pdf_url, str(pdf_path))
+
+            import httpx
+            with httpx.Client(follow_redirects=True, verify=False, timeout=30.0) as http_client:
+                resp = http_client.get(pdf_url)
+                resp.raise_for_status()
+                pdf_path.write_bytes(resp.content)
+
             logger.info(f"Successfully downloaded PDF: {paper.arxiv_id}")
             return pdf_path
         except Exception as exc:
             logger.error(f"Failed to download PDF for {paper.arxiv_id}: {exc}")
             return None
+
     

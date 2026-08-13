@@ -69,3 +69,5 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 addopts = "-ra"
 testpaths = ["tests"]
+pythonpath = ["src"]
+
