@@ -2,18 +2,25 @@
 
 import logging
 import chromadb
+from pathlib import Path
 from matsci_agent.domain.schemas import PaperChunk
 from matsci_agent.infrastructure.ml.embedder import MaterialsEmbedder
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_PERSIST_DIR = str(Path(__file__).resolve().parents[4] / "chroma_db")
+
 class ChromaVectorStore:
     COLLECTION_NAME = "materials_papers"
 
-    def __init__(self, persist_dir: str = "./chroma_db"):
+    def __init__(self, persist_dir: str | None = None):
+        if persist_dir is None or persist_dir == "./chroma_db":
+            persist_dir = DEFAULT_PERSIST_DIR
         self.client = chromadb.PersistentClient(path=persist_dir)
         self.collection = self.client.get_or_create_collection(
-            name=self.COLLECTION_NAME, metadata={"hnsw:space": "cosine"}
+            name=self.COLLECTION_NAME,
+            embedding_function=None,
+            metadata={"hnsw:space": "cosine"},
         )
         self.embedder = MaterialsEmbedder()
 
@@ -47,27 +54,49 @@ class ChromaVectorStore:
         query: str,
         n_results: int = 10,
         where: dict | None = None,
+        deduplicate_papers: bool = True,
+        max_chunks_per_paper: int = 1,
     ) -> list[dict]:
-        """Search for relevant paper chunks using vector similarity."""
+        """Search for relevant paper chunks using vector similarity with paper deduplication."""
         query_embedding = self.embedder.embed_single(query)
+
+        total_in_db = self.count() or n_results
+        fetch_limit = min(n_results * 5 if deduplicate_papers else n_results, max(total_in_db, n_results))
 
         results = self.collection.query(
             query_embeddings=[query_embedding],
-            n_results=n_results,
+            n_results=fetch_limit,
             where=where,
         )
 
         chunks = []
+        seen_paper_counts: dict[str, int] = {}
+
         if results and results.get("ids") and results["ids"][0]:
             for i in range(len(results["ids"][0])):
                 distance = results["distances"][0][i]
+                metadata = results["metadatas"][0][i]
+
+                # Identify paper by unique arxiv_id or title
+                paper_key = metadata.get("arxiv_id") or metadata.get("title") or f"paper_{i}"
+
+                if deduplicate_papers:
+                    count_so_far = seen_paper_counts.get(paper_key, 0)
+                    if count_so_far >= max_chunks_per_paper:
+                        continue
+                    seen_paper_counts[paper_key] = count_so_far + 1
+
                 chunks.append({
                     "id": results["ids"][0][i],
                     "text": results["documents"][0][i],
-                    "metadata": results["metadatas"][0][i],
+                    "metadata": metadata,
                     "distance": distance,
                     "similarity": 1.0 - distance,
                 })
+
+                if len(chunks) >= n_results:
+                    break
+
         return chunks
 
     def count(self) -> int:
