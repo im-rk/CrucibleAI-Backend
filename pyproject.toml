@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "alembic>=1.13",
+  "anthropic>=1.7",
   "arxiv>=2.1.0",
   "asyncpg>=0.29",
   "chromadb>=0.5",
