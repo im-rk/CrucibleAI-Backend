@@ -358,6 +358,7 @@ class ScreeningAgent:
                     material_name=formula, material_formula=formula, property_name=prop,
                     value_raw=f"{value} {pred['unit']}", value_numeric=value, unit=pred["unit"],
                     source_title="KRR prediction", confidence=pred["confidence"], is_predicted=True,
+                    uncertainty=pred.get("uncertainty"),
                     method=pred["method"],
                 ))
                 await emit(config, "krr_prediction", formula=formula, property=prop, value=value)

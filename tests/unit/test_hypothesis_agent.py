@@ -116,6 +116,14 @@ async def test_knowledge_gaps_cover_missing_predicted_and_qualitative_items() ->
     assert "'Air stable' cannot be verified" in gaps
 
 
+async def test_database_only_candidates_are_flagged_as_unconfirmed() -> None:
+    cand = {**candidate(1, "AlN", "qualified"), "origin": "database"}
+    out = await HypothesisAgent(FakeLLM(available=False)).run(state([cand], [record("AlN", 6.2, "offline reference")]))
+    assert any("no retrieved paper reports it" in h["statement"] for h in out["hypotheses"])
+    assert any("came from a database screen only" in g for g in out["knowledge_gaps"])
+    assert all(h["evidence"] for h in out["hypotheses"])  # cites the database record
+
+
 async def test_no_candidates_reports_a_gap_and_does_not_crash() -> None:
     out = await HypothesisAgent(FakeLLM(available=True, output=HypothesisOutput(hypotheses=[], knowledge_gaps=[]))).run(state([]))
     assert out["hypotheses"] == []

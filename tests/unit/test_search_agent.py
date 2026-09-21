@@ -200,5 +200,6 @@ def test_heuristic_relevance_orders_on_topic_above_off_topic() -> None:
     assert on > 0.8 and off < 0.1
 
 
-def test_keywords_drops_stopwords_and_duplicates() -> None:
+def test_keywords_drops_stopwords_duplicates_and_bare_numbers_but_keeps_short_terms() -> None:
     assert keywords("Find the materials with high high conductivity") == ["conductivity"]
+    assert keywords("UV LED bandgap above 3.4 eV") == ["uv", "led", "bandgap", "ev"]

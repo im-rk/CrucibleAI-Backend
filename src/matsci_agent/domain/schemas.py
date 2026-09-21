@@ -29,8 +29,8 @@ class PaperChunk(BaseModel):
 
 class ResearchRequest(BaseModel):
     """User input contract for starting a research run."""
-    query: str
-    max_results: int = 10
+    query: str = Field(min_length=3, max_length=1000)
+    max_results: int = Field(default=10, ge=1, le=30)
 
 
 class MaterialProperty(BaseModel):
@@ -41,7 +41,8 @@ class MaterialProperty(BaseModel):
     value: float | str
     unit: str
     source: str = "Materials Project"
-    doi: str = "https://doi.org/10.1038/s41524-020-00448-7"
+    # Jain et al., "Commentary: The Materials Project", APL Materials 1, 011002 (2013)
+    doi: str = "https://doi.org/10.1063/1.4812323"
     is_direct_gap: Optional[bool] = None
     is_predicted: bool = False
     confidence: str = "high"
@@ -64,6 +65,8 @@ class PropertyRecord(BaseModel):
     confidence: str = "medium"  # high | medium | low
     excerpt: str = ""
     is_predicted: bool = False
+    uncertainty: Optional[float] = None  # cross-validated RMSE for predicted values
+    is_direct_gap: Optional[bool] = None  # band-gap records from a database lookup
     method: str = "literature"  # literature | Materials Project (DFT) | KRR | offline reference
 
 

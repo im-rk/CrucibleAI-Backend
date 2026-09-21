@@ -95,6 +95,11 @@ def test_normalise_converts_to_canonical_units(prop, value, unit, expected) -> N
     assert ok and converted == pytest.approx(expected, rel=1e-3)
 
 
+def test_normalise_does_not_leave_float_noise() -> None:
+    assert normalise("bandgap", 1.64, "eV")[1] == 1.64
+    assert normalise("ionic_conductivity", 1.2, "mS/cm")[1] == 0.0012
+
+
 def test_normalise_reports_canonical_unit() -> None:
     assert normalise("Ionic conductivity", 1.0, "mS/cm")[0::2] == ("ionic_conductivity", "S/cm")
 

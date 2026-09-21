@@ -167,5 +167,6 @@ def test_heuristic_extract_reads_common_sentence_patterns() -> None:
     records = {(r.property_name, r.material_formula): r for r in heuristic_extract(chunk(text=text))}
     assert records[("ionic_conductivity", "Li7La3Zr2O12")].value_raw.startswith("3 ")
     assert records[("bandgap", "GaN")].value_raw == "3.4 eV"
-    assert ("electrochemical_stability_window", None) in records
+    # no formula in that sentence: attributed to the most recent one before it
+    assert ("electrochemical_stability_window", "GaN") in records
     assert all(r.confidence == "low" for r in records.values())

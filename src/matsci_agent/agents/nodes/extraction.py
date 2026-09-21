@@ -57,11 +57,19 @@ _PROXIMITY = 90  # characters after the property name in which its value must ap
 
 
 def heuristic_extract(chunk: dict) -> list[RawRecord]:
-    """Regex extraction of 'property ... number unit' patterns; always low confidence."""
+    """Regex extraction of 'property ... number unit' patterns; always low confidence.
+
+    A sentence with no formula of its own ("Its stability window is 5.5 V.") is attributed to
+    the most recent formula earlier in the chunk.
+    """
     text = re.sub(r"\s+", " ", chunk["text"])
     records: list[RawRecord] = []
+    subject: str | None = None
     for sentence in re.split(r"(?<=[.!?])\s+(?=[A-Z])", text):
         formulas = find_formulas(sentence)
+        if formulas:
+            subject = formulas[0]
+        formulas = formulas or ([subject] if subject else [])
         lowered = sentence.lower()
         for prop, pattern in _VALUE_RE.items():
             for alias in PROPERTIES[prop][1]:
@@ -245,6 +253,7 @@ class ExtractionAgent:
                     source_id=p.material_id,
                     confidence="high" if self.mp_client.online else "medium",
                     is_predicted=False,
+                    is_direct_gap=p.is_direct_gap,
                     method=method,
                 ))
         await emit(

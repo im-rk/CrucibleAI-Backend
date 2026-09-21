@@ -50,7 +50,7 @@ class ReformulatedQuery(BaseModel):
 def keywords(text: str) -> list[str]:
     seen: dict[str, None] = {}
     for token in re.findall(r"[a-z0-9]+", text.lower()):
-        if len(token) > 2 and token not in STOPWORDS:
+        if len(token) >= 2 and not token.isdigit() and token not in STOPWORDS:
             seen.setdefault(token)
     return list(seen)
 

@@ -35,12 +35,22 @@ class Settings(BaseSettings):
     live_arxiv_fallback: bool = Field(default=True, alias="LIVE_ARXIV_FALLBACK")
     llm_concurrency: int = Field(default=4, alias="LLM_CONCURRENCY")
 
+    # API runtime
+    cors_origins: str = Field(default="http://localhost:3000,http://localhost:5173", alias="CORS_ORIGINS")
+    pipeline_timeout_s: int = Field(default=300, alias="PIPELINE_TIMEOUT_S")
+    max_concurrent_runs: int = Field(default=2, alias="MAX_CONCURRENT_RUNS")
+    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+
     # Retrieval tuning (hybrid BM25 + semantic search, optional cross-encoder rerank).
     reranker_enabled: bool = Field(default=False, alias="RERANKER_ENABLED")
     reranker_model: str = Field(
         default="cross-encoder/ms-marco-MiniLM-L-6-v2", alias="RERANKER_MODEL"
     )
     arxiv_verify_ssl: bool = Field(default=True, alias="ARXIV_VERIFY_SSL")
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     @computed_field
     @property

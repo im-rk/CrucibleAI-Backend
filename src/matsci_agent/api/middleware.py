@@ -1,19 +1,29 @@
-"""Middleware for request logging, CORS, and error handling."""
+"""Middleware for CORS and error handling."""
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from matsci_agent.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def configure_middleware(app: FastAPI) -> None:
-    """Attach the baseline middleware stack to the app."""
+    """Attach CORS (explicit origins, no credentials) and a catch-all JSON error handler."""
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
+        allow_origins=settings.cors_origin_list,
+        allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
 
+    @app.exception_handler(Exception)
+    async def unhandled_error(request: Request, exc: Exception) -> JSONResponse:
+        logger.exception(f"Unhandled error on {request.method} {request.url.path}")
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
