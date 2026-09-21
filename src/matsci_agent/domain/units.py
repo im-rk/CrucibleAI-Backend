@@ -68,7 +68,8 @@ class ParsedValue:
 
 def parse_value(raw: str) -> ParsedValue:
     """Parse '3.4 × 10⁻³', '2–4', '> 1e-3', '3.4 ± 0.1' and friends into numbers."""
-    text = _SUPERSCRIPT_RUN.sub(lambda m: "^" + m.group().translate(_SUPERSCRIPTS), raw.strip())
+    # Real values are short; the cap bounds the regexes' worst case on hostile input.
+    text = _SUPERSCRIPT_RUN.sub(lambda m: "^" + m.group().translate(_SUPERSCRIPTS), raw.strip()[:200])
     text = text.replace("−", "-").replace(" ", " ")
     qualifier = ""
     for pattern, symbol in _QUALIFIERS:
