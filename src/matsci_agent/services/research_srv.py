@@ -3,108 +3,89 @@
 from __future__ import annotations
 
 import asyncio
-import uuid
 import logging
+import uuid
+from collections.abc import AsyncIterator, Callable
+from time import perf_counter
 from typing import Any
 
+from matsci_agent.agents.orchestrator import initial_state, run_config
 from matsci_agent.domain.schemas import ResearchRequest
-from matsci_agent.infrastructure.clients.mp_api import MaterialsProjectClient
-from matsci_agent.infrastructure.ml.krr import KRRPropertyPredictor
-from matsci_agent.infrastructure.retrieval.hybrid_search import HybridSearch
+from matsci_agent.services.report_builder import build_report
 
 logger = logging.getLogger(__name__)
 
 
+class PipelineError(RuntimeError):
+    """The research run failed as a whole (as opposed to one agent failing)."""
+
+
 class ResearchService:
-    """Coordinates agent execution across literature, materials DB, and KRR prediction."""
+    """Runs the compiled agent graph and streams its progress as events."""
 
     def __init__(
         self,
-        search: HybridSearch,
-        mp_client: MaterialsProjectClient,
-        krr_predictor: KRRPropertyPredictor,
+        graph,
+        mode: Callable[[], dict[str, Any]],
+        *,
+        timeout_s: float = 300,
+        max_concurrent: int = 2,
     ) -> None:
-        self.search = search
-        self.mp_client = mp_client
-        self.krr_predictor = krr_predictor
+        self.graph = graph
+        self.mode = mode
+        self.timeout_s = timeout_s
+        self._slots = asyncio.Semaphore(max_concurrent)
+
+    async def stream(self, request: ResearchRequest) -> AsyncIterator[dict]:
+        """Yield progress events, ending with `complete` (the report) or `error`."""
+        session_id = str(uuid.uuid4())
+        queue: asyncio.Queue[dict | None] = asyncio.Queue()
+        mode = self.mode()
+
+        async def emit(event: dict) -> None:
+            await queue.put(event)
+
+        async def runner() -> None:
+            try:
+                async with self._slots:
+                    started = perf_counter()
+                    state = await asyncio.wait_for(
+                        self.graph.ainvoke(
+                            initial_state(request.query, request.max_results), run_config(emit)
+                        ),
+                        timeout=self.timeout_s,
+                    )
+                    report = build_report(
+                        state, session_id=session_id, query=request.query,
+                        max_results=request.max_results, mode=mode,
+                        duration_ms=int((perf_counter() - started) * 1000),
+                    )
+                await queue.put({"event": "complete", "report": report})
+            except asyncio.TimeoutError:
+                await queue.put({"event": "error", "message": f"Research timed out after {self.timeout_s:.0f}s."})
+            except Exception as exc:  # noqa: BLE001
+                logger.exception(f"Research run {session_id} failed")
+                await queue.put({"event": "error", "message": f"{type(exc).__name__}: {exc}"})
+            finally:
+                await queue.put(None)
+
+        logger.info(f"Starting research run {session_id}: {request.query!r}")
+        yield {"event": "session_started", "session_id": session_id, "query": request.query, "mode": mode}
+        if self._slots.locked():
+            yield {"event": "queued", "message": "Waiting for a free research slot."}
+        task = asyncio.create_task(runner())
+        try:
+            while (event := await queue.get()) is not None:
+                yield event
+        finally:  # client disconnected or finished: never leave the pipeline running unobserved
+            if not task.done():
+                task.cancel()
 
     async def run(self, request: ResearchRequest) -> dict[str, Any]:
-        session_id = str(uuid.uuid4())
-        logger.info(f"Starting research run {session_id} for query: '{request.query}'")
-
-        # Phase 1: Hybrid Search (semantic + BM25, fused with RRF)
-        retrieved_chunks = []
-        try:
-            retrieved = await asyncio.to_thread(
-                self.search.search, request.query, request.max_results
-            )
-            for chunk in retrieved:
-                retrieved_chunks.append({
-                    "id": chunk["id"],
-                    "text": chunk["text"],
-                    "similarity": round(float(chunk["similarity"]), 4),
-                    "rrf_score": chunk.get("rrf_score"),
-                    "metadata": chunk["metadata"],
-                })
-        except Exception as exc:
-            logger.warning(f"Vector store search warning: {exc}")
-
-        # Candidate materials extracted from domain research
-        candidate_formulas = ["Li7La3Zr2O12", "GaN"]
-        if "battery" in request.query.lower() or "electrolyte" in request.query.lower():
-            candidate_formulas = ["Li7La3Zr2O12", "Li10GeP212", "LiCoO2"]
-        elif "solar" in request.query.lower() or "perovskite" in request.query.lower():
-            candidate_formulas = ["CsPbI3", "MAPbI3", "TiO2"]
-        elif "semiconductor" in request.query.lower() or "bandgap" in request.query.lower():
-            candidate_formulas = ["GaN", "GaAs", "Si"]
-
-        # Phase 2: Materials Project Database Lookup
-        property_records: dict[str, list[dict[str, Any]]] = {}
-        for formula in candidate_formulas:
-            props = self.mp_client.get_properties(formula)
-            property_records[formula] = [
-                {
-                    "material_id": p.material_id,
-                    "formula": p.formula,
-                    "property_name": p.property_name,
-                    "value": p.value,
-                    "unit": p.unit,
-                    "source": p.source,
-                    "doi": p.doi,
-                    "is_direct_gap": p.is_direct_gap,
-                }
-                for p in props
-            ]
-
-        # Phase 3: ML Property Prediction (Kernel Ridge Regression)
-        krr_predictions: dict[str, dict[str, Any]] = {}
-        for formula in candidate_formulas:
-            pred = self.krr_predictor.predict(formula, property_name="band_gap")
-            krr_predictions[formula] = pred
-
-        # Phase 4: Synthesis & Hypothesis Generation
-        top_mat = candidate_formulas[0]
-        hypothesis = (
-            f"Based on literature vector retrieval and Materials Project analysis, candidate formula '{top_mat}' "
-            f"demonstrates optimal target properties for '{request.query}'. Machine learning (KRR RBF) predicts a bandgap "
-            f"of {krr_predictions[top_mat]['predicted_value']} {krr_predictions[top_mat]['unit']} with high confidence."
-        )
-
-        return {
-            "session_id": session_id,
-            "status": "COMPLETED",
-            "query": request.query,
-            "max_results": request.max_results,
-            "search_results": retrieved_chunks,
-            "candidate_formulas": candidate_formulas,
-            "property_records": property_records,
-            "krr_predictions": krr_predictions,
-            "hypothesis": hypothesis,
-            "agent_logs": [
-                {"step": "LITERATURE_SEARCH", "details": f"Retrieved {len(retrieved_chunks)} paper chunks via hybrid (semantic + BM25) search."},
-                {"step": "MATERIALS_PROJECT_LOOKUP", "details": f"Queried Materials Project API for formulas: {', '.join(candidate_formulas)}."},
-                {"step": "KRR_PREDICTION", "details": "Computed Magpie composition features and executed Kernel Ridge Regression RBF model."},
-                {"step": "SYNTHESIS", "details": "Synthesized candidate comparison matrix and generated final research hypothesis."},
-            ],
-        }
-
+        """Run to completion and return the report (non-streaming)."""
+        async for event in self.stream(request):
+            if event["event"] == "complete":
+                return event["report"]
+            if event["event"] == "error":
+                raise PipelineError(event["message"])
+        raise PipelineError("Research ended without a result.")

@@ -152,6 +152,11 @@ def _normalise_unit(unit: str) -> str:
     )
 
 
+def _tidy(value: float | None) -> float | None:
+    """Drop float noise from unit conversion (1.64 * 1.0 -> 1.6400000000000001)."""
+    return None if value is None else float(f"{value:.10g}")
+
+
 def normalise(property_name: str, value: float | None, unit: str) -> tuple[str, float | None, str, bool]:
     """Return (canonical property, value, unit, converted?) with the value in the canonical unit.
 
@@ -163,8 +168,8 @@ def normalise(property_name: str, value: float | None, unit: str) -> tuple[str, 
     canonical_unit = PROPERTIES[prop][0]
     norm = _normalise_unit(unit)
     if prop == "critical_temperature" and norm in {"c", "celsius"}:
-        return prop, None if value is None else value + 273.15, canonical_unit, True
+        return prop, _tidy(None if value is None else value + 273.15), canonical_unit, True
     factor = UNIT_FACTORS.get(prop, {}).get(norm)
     if factor is None:
         return prop, value, unit, False
-    return prop, None if value is None else value * factor, canonical_unit, True
+    return prop, _tidy(None if value is None else value * factor), canonical_unit, True

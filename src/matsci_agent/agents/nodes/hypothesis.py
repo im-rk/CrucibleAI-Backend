@@ -53,7 +53,7 @@ class HypothesisAgent:
         candidates = state.get("screened_candidates", [])
         criteria = state.get("criteria", [])
         top = [c for c in candidates if c["status"] != "rejected"][: self.top_n] or candidates[: self.top_n]
-        evidence = self._build_evidence(top, state.get("extracted_properties", []), state.get("retrieved_papers", []))
+        evidence = self._build_evidence(candidates[: self.top_n * 2], state.get("extracted_properties", []), state.get("retrieved_papers", []))
         warnings: list[str] = []
 
         gaps = self._knowledge_gaps(top, criteria)
@@ -163,6 +163,11 @@ class HypothesisAgent:
                     gaps.append(f"No measured value for '{res['label']}' was found for {who}.")
                 elif res["status"].startswith("predicted"):
                     gaps.append(f"'{res['label']}' for {who} rests on a KRR estimate; no experimental value was found.")
+        for cand in top:
+            if cand.get("origin") == "database":
+                gaps.append(
+                    f"{cand['formula'] or cand['name']} came from a database screen only; no retrieved paper reports it."
+                )
         for crit in criteria:
             if crit["kind"] == "qualitative":
                 gaps.append(f"'{crit['label']}' cannot be verified from the extracted data and needs dedicated experimental evidence.")
@@ -197,6 +202,16 @@ class HypothesisAgent:
                     cite(set(formulas)),
                 ))
         for cand in top[:2]:
+            if cand.get("origin") == "database":
+                who = cand["formula"] or cand["name"]
+                out.append(self._template(
+                    f"{who} appears to satisfy the requirements on database values alone: no retrieved paper reports "
+                    "it, so its suitability is unconfirmed.",
+                    f"Confirm {target.lower()} for {who} experimentally using {method}, and check that it can be "
+                    "synthesised phase-pure.",
+                    cite({who}),
+                ))
+                continue
             weak = next((r for r in cand["criteria"] if r["status"] in ("missing", "predicted_met", "predicted_not_met")), None)
             if weak:
                 who = cand["formula"] or cand["name"]
@@ -211,11 +226,15 @@ class HypothesisAgent:
             failed = Counter(r["label"] for c in candidates for r in c["criteria"] if r["status"] in ("not_met", "missing"))
             if failed:
                 label, count = failed.most_common(1)[0]
+                blocked = {
+                    c["formula"] or c["name"] for c in candidates
+                    if any(r["label"] == label and r["status"] in ("not_met", "missing") for r in c["criteria"])
+                }
                 out.append(self._template(
                     f"Few materials satisfy every requirement because '{label}' is the criterion most often unmet "
                     f"or undocumented ({count} of {len(candidates)} candidates).",
                     f"Broaden the search around '{label}' or relax that threshold to see which materials become viable.",
-                    [],
+                    cite(blocked),
                 ))
         return out[:5]
 
