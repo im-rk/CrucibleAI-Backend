@@ -43,11 +43,13 @@ class ChromaVectorStore:
                 "title": c.metadata.title,
                 "authors": ", ".join(c.metadata.authors[:3]),
                 "year": c.metadata.year,
+                "doi": c.metadata.doi or "",
             }
             for c in chunks
         ]
 
-        self.collection.add(
+        # upsert, so re-running ingestion refreshes chunks instead of colliding on their ids
+        self.collection.upsert(
             ids=ids, embeddings=embeddings, documents=texts, metadatas=metadatas
         )
         logger.info(f"Indexed {len(chunks)} chunks into ChromaDB.")
@@ -132,4 +134,4 @@ class ChromaVectorStore:
         return {
             chunk_id: float(np.dot(query_vec, np.asarray(vec)))
             for chunk_id, vec in zip(got["ids"], got["embeddings"])
-        }
+        }

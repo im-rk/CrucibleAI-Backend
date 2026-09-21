@@ -28,11 +28,13 @@ class ResearchService:
         graph,
         mode: Callable[[], dict[str, Any]],
         *,
+        persistence=None,
         timeout_s: float = 300,
         max_concurrent: int = 2,
     ) -> None:
         self.graph = graph
         self.mode = mode
+        self.persistence = persistence
         self.timeout_s = timeout_s
         self._slots = asyncio.Semaphore(max_concurrent)
 
@@ -49,6 +51,8 @@ class ResearchService:
             try:
                 async with self._slots:
                     started = perf_counter()
+                    if self.persistence:
+                        await self.persistence.start(session_id, request.query)
                     state = await asyncio.wait_for(
                         self.graph.ainvoke(
                             initial_state(request.query, request.max_results), run_config(emit)
@@ -60,12 +64,18 @@ class ResearchService:
                         max_results=request.max_results, mode=mode,
                         duration_ms=int((perf_counter() - started) * 1000),
                     )
+                if self.persistence:
+                    await self.persistence.finish(session_id, report)
                 await queue.put({"event": "complete", "report": report})
             except asyncio.TimeoutError:
-                await queue.put({"event": "error", "message": f"Research timed out after {self.timeout_s:.0f}s."})
+                message = f"Research timed out after {self.timeout_s:.0f}s."
+                await self._record_failure(session_id, message)
+                await queue.put({"event": "error", "message": message})
             except Exception as exc:  # noqa: BLE001
                 logger.exception(f"Research run {session_id} failed")
-                await queue.put({"event": "error", "message": f"{type(exc).__name__}: {exc}"})
+                message = f"{type(exc).__name__}: {exc}"
+                await self._record_failure(session_id, message)
+                await queue.put({"event": "error", "message": message})
             finally:
                 await queue.put(None)
 
@@ -80,6 +90,10 @@ class ResearchService:
         finally:  # client disconnected or finished: never leave the pipeline running unobserved
             if not task.done():
                 task.cancel()
+
+    async def _record_failure(self, session_id: str, message: str) -> None:
+        if self.persistence:
+            await self.persistence.fail(session_id, message)
 
     async def run(self, request: ResearchRequest) -> dict[str, Any]:
         """Run to completion and return the report (non-streaming)."""

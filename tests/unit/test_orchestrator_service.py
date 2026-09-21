@@ -192,3 +192,43 @@ async def test_concurrent_runs_are_limited_and_the_waiter_is_told_it_is_queued()
     gate.set()
     await asyncio.gather(first, second_task)
     assert events[-1] == "complete"
+
+
+# ---- persistence hooks --------------------------------------------------------------------------
+
+
+class RecordingPersistence:
+    def __init__(self):
+        self.calls: list[tuple] = []
+
+    async def start(self, sid, goal):
+        self.calls.append(("start", goal))
+
+    async def finish(self, sid, report):
+        self.calls.append(("finish", report["session_id"] == sid))
+
+    async def fail(self, sid, message):
+        self.calls.append(("fail", message))
+
+
+async def test_a_successful_run_is_persisted_start_then_finish() -> None:
+    async def behaviour(state, config):
+        return initial_state("solid electrolytes")
+
+    store = RecordingPersistence()
+    await service_for(behaviour, persistence=store).run(REQUEST)
+    assert store.calls == [("start", "solid electrolytes"), ("finish", True)]
+
+
+async def test_a_failed_or_timed_out_run_is_recorded_as_failed() -> None:
+    async def broken(state, config):
+        raise ValueError("boom")
+
+    async def slow(state, config):
+        await asyncio.sleep(5)
+
+    for behaviour, expected in ((broken, "ValueError: boom"), (slow, "timed out")):
+        store = RecordingPersistence()
+        with pytest.raises(PipelineError):
+            await service_for(behaviour, persistence=store, timeout_s=0.05).run(REQUEST)
+        assert store.calls[0][0] == "start" and store.calls[-1][0] == "fail" and expected in store.calls[-1][1]

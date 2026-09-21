@@ -14,6 +14,7 @@ from matsci_agent.api.server import app
 from matsci_agent.domain.state import initial_state
 from matsci_agent.infrastructure.clients.mp_api import MaterialsProjectClient
 from matsci_agent.services.papers_srv import PaperCatalog
+from matsci_agent.services.persistence import PersistenceService
 from matsci_agent.services.report_builder import build_report
 from matsci_agent.services.research_srv import PipelineError
 
@@ -54,6 +55,7 @@ class FakeStore:
 def client():
     app.dependency_overrides[deps.get_research_service] = StubService
     app.dependency_overrides[deps.get_paper_catalog] = lambda: PaperCatalog(FakeStore())
+    app.dependency_overrides[deps.get_persistence] = lambda: PersistenceService(None)  # hermetic: no real database
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -160,3 +162,53 @@ async def test_sse_frames_send_keepalives_while_quiet_and_never_drop_events() ->
     frames = [f async for f in sse_frames(slow_events(), heartbeat_s=0.05)]
     assert frames[-1] == 'event: late\ndata: {"n": 1}\n\n'
     assert frames.count(": keep-alive\n\n") >= 2
+
+
+# ---- sessions & health with a database --------------------------------------------------------------
+
+
+@pytest.fixture
+def sqlite_store():
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from sqlalchemy.pool import StaticPool
+
+    from matsci_agent.infrastructure.db.models import Base
+    from matsci_agent.services.persistence import PersistenceService
+
+    engine = create_async_engine("sqlite+aiosqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
+
+    async def create():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    asyncio.run(create())
+    return PersistenceService(async_sessionmaker(engine, expire_on_commit=False))
+
+
+def test_sessions_endpoints_return_stored_runs_404_and_503(client, sqlite_store) -> None:
+    import uuid
+
+    sid = str(uuid.uuid4())
+    asyncio.run(sqlite_store.start(sid, "solid electrolytes"))
+    asyncio.run(sqlite_store.finish(sid, {"agent_logs": [{"agent": "A", "step": "S", "details": "d", "duration_ms": 1}], "extracted_properties": []}))
+    app.dependency_overrides[deps.get_persistence] = lambda: sqlite_store
+
+    got = client.get(f"/api/sessions/{sid}").json()
+    assert got["status"] == "COMPLETED" and got["agent_logs"][0]["agent"] == "A"
+    assert client.get("/api/sessions").json()["sessions"][0]["session_id"] == sid
+    assert client.get(f"/api/sessions/{uuid.uuid4()}").status_code == 404
+
+    from matsci_agent.services.persistence import PersistenceService
+
+    app.dependency_overrides[deps.get_persistence] = lambda: PersistenceService(None)
+    assert client.get(f"/api/sessions/{sid}").status_code == 503
+
+
+def test_health_reports_the_database_state(client, sqlite_store, monkeypatch) -> None:
+    from matsci_agent.services.persistence import PersistenceService
+
+    monkeypatch.setattr(deps, "get_mp_client", lambda: MaterialsProjectClient(api_key=None))
+    app.dependency_overrides[deps.get_persistence] = lambda: sqlite_store
+    assert client.get("/api/health").json()["database"] == "connected"
+    app.dependency_overrides[deps.get_persistence] = lambda: PersistenceService(None)
+    assert client.get("/api/health").json()["database"] == "disabled"
