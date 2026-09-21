@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import String, Text, Float, Integer, Boolean, ForeignKey, DateTime, func
+from sqlalchemy import JSON, String, Text, Float, Integer, Boolean, ForeignKey, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -30,6 +30,7 @@ class ResearchSession(Base):
         DateTime(timezone=True), nullable=True
     )
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    report: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # the finished report
 
     # Relationships
     property_records: Mapped[List["PropertyRecord"]] = relationship(
@@ -92,6 +93,10 @@ class PropertyRecord(Base):
     extracted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    is_predicted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    prediction_confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # KRR CV RMSE
+    method: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    confidence: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
 
     # Relationships
     session: Mapped["ResearchSession"] = relationship(back_populates="property_records")

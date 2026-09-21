@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     pipeline_timeout_s: int = Field(default=300, alias="PIPELINE_TIMEOUT_S")
     max_concurrent_runs: int = Field(default=2, alias="MAX_CONCURRENT_RUNS")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    persistence_enabled: bool = Field(default=True, alias="PERSISTENCE_ENABLED")
 
     # Retrieval tuning (hybrid BM25 + semantic search, optional cross-encoder rerank).
     reranker_enabled: bool = Field(default=False, alias="RERANKER_ENABLED")

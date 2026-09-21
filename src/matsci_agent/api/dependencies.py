@@ -17,6 +17,7 @@ from matsci_agent.agents.orchestrator import build_research_graph
 from matsci_agent.core.config import settings
 from matsci_agent.infrastructure.clients.arxiv import ArxivClient
 from matsci_agent.infrastructure.clients.mp_api import MaterialsProjectClient
+from matsci_agent.infrastructure.db.session import create_session_factory
 from matsci_agent.infrastructure.llm.anthropic_client import LLMClient
 from matsci_agent.infrastructure.ml.krr import KRRPropertyPredictor
 from matsci_agent.infrastructure.retrieval.bm25_index import BM25Index
@@ -25,6 +26,7 @@ from matsci_agent.infrastructure.retrieval.reranker import CrossEncoderReranker
 from matsci_agent.infrastructure.vector_store.chromadb import ChromaVectorStore
 from matsci_agent.services.grounding import GroundingChecker
 from matsci_agent.services.papers_srv import PaperCatalog
+from matsci_agent.services.persistence import PersistenceService
 from matsci_agent.services.research_srv import ResearchService
 
 
@@ -67,6 +69,12 @@ def get_krr_predictor() -> KRRPropertyPredictor:
     return KRRPropertyPredictor()
 
 
+@lru_cache(maxsize=1)
+def get_persistence() -> PersistenceService:
+    factory = create_session_factory(settings.database_url) if settings.persistence_enabled else None
+    return PersistenceService(factory)
+
+
 def runtime_mode() -> dict:
     """What the pipeline is actually running on; reported by /health and in every report."""
     llm = get_llm_client()
@@ -94,6 +102,6 @@ def get_research_service() -> ResearchService:
         ReportAgent(GroundingChecker(llm)),
     )
     return ResearchService(
-        graph, runtime_mode,
+        graph, runtime_mode, persistence=get_persistence(),
         timeout_s=settings.pipeline_timeout_s, max_concurrent=settings.max_concurrent_runs,
     )
