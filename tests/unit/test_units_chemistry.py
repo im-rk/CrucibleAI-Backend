@@ -40,6 +40,16 @@ def test_parse_value_keeps_qualifiers(raw: str, qualifier: str) -> None:
     assert parse_value(raw).qualifier == qualifier
 
 
+def test_parse_value_is_fast_on_hostile_input() -> None:
+    # Previously ~90s for 20k digits (quadratic regex backtracking).
+    import time
+
+    start = time.perf_counter()
+    parse_value("1" * 20000)
+    parse_value("1.2.3." * 5000)
+    assert time.perf_counter() - start < 1.0
+
+
 def test_parse_value_returns_none_when_there_is_no_number() -> None:
     assert parse_value("n/a").value is None
 
