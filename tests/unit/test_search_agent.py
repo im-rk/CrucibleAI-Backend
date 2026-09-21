@@ -134,6 +134,28 @@ async def test_llm_failure_falls_back_to_heuristics_with_a_warning() -> None:
     assert any("heuristics" in w for w in out["warnings"])
 
 
+async def test_one_failed_batch_falls_back_only_for_that_batch() -> None:
+    class FlakyLLM(FakeLLM):
+        async def structured(self, prompt, schema, **kwargs):
+            if schema is SearchQueries:
+                return SearchQueries(queries=["q"])
+            if "[0] first-batch" in prompt:
+                return scores(*([0.9] * 8))
+            raise LLMError("second batch down")
+
+    first = [chunk(f"a{i}", "first-batch text") for i in range(8)]
+    second = [chunk("b0", "ionic conductivity solid electrolyte", sim=0.7)]
+    events = Events()
+    out = await SearchAgent(FlakyLLM(), FakeSearch(default=first + second)).run(
+        initial_state("ionic conductivity solid electrolyte"), events.config
+    )
+    methods = {c["id"]: c["relevance_method"] for c in out["retrieved_chunks"]}
+    assert {methods[f"a{i}"] for i in range(8)} == {"llm"}
+    assert methods["b0"] == "heuristic"
+    assert events.seen[-1]["method"] == "mixed"
+    assert any("heuristics" in w for w in out["warnings"])
+
+
 async def test_no_llm_configured_warns_and_still_searches() -> None:
     llm = LLMClient(api_key=None, model="m")
     assert not llm.available
