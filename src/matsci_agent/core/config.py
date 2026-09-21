@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     chroma_port: int = Field(default=8000, alias="CHROMA_PORT")
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
 
+    # Retrieval tuning (hybrid BM25 + semantic search, optional cross-encoder rerank).
+    reranker_enabled: bool = Field(default=False, alias="RERANKER_ENABLED")
+    reranker_model: str = Field(
+        default="cross-encoder/ms-marco-MiniLM-L-6-v2", alias="RERANKER_MODEL"
+    )
+    arxiv_verify_ssl: bool = Field(default=True, alias="ARXIV_VERIFY_SSL")
+
     @computed_field
     @property
     def database_url(self) -> str:
