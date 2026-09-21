@@ -15,7 +15,13 @@ from matsci_agent.agents.events import emit
 from matsci_agent.domain.chemistry import elements_in, find_formulas
 from matsci_agent.domain.schemas import PropertyRecord
 from matsci_agent.domain.state import ResearchState
-from matsci_agent.domain.units import PROPERTIES, normalise, parse_value
+from matsci_agent.domain.units import (
+    PROPERTIES,
+    UNIT_PATTERNS,
+    VALUE_PATTERN,
+    normalise,
+    parse_value,
+)
 from matsci_agent.infrastructure.llm.anthropic_client import LLMClient, LLMError
 
 logger = logging.getLogger(__name__)
@@ -43,24 +49,9 @@ class ExtractionOutput(BaseModel):
 
 # ---- deterministic fallback (no LLM) ---------------------------------------------------
 
-_VALUE = (
-    r"(?P<val>[<>~≈≥≤]?\s*\d+(?:\.\d+)?(?:\s*[–-]\s*\d+(?:\.\d+)?)?"
-    r"(?:\s*[×xX·*]\s*10\s*\^?\s*\{?[-−+]?[\d⁻⁺⁰¹²³⁴⁵⁶⁷⁸⁹]+\}?|[eE][-+]?\d+)?)"
-)
-_UNITS = {
-    "ionic_conductivity": r"(?:[mµμu]?S\s?/\s?cm|[mµμu]?S\s?cm(?:\^?-1|⁻¹)|S\s?/\s?m)",
-    "bandgap": r"m?eV",
-    "formation_energy": r"(?:eV/atom|meV/atom|kJ/mol)",
-    "density": r"(?:g\s?/\s?cm(?:3|³)|g\s?cm(?:\^?-3|⁻³)|kg\s?/\s?m(?:3|³))",
-    "electrochemical_stability_window": r"V",
-    "activation_energy": r"m?eV",
-    "critical_temperature": r"K",
-    "power_conversion_efficiency": r"%",
-    "capacity": r"(?:mAh\s?/\s?g|mAh\s?g(?:\^?-1|⁻¹))",
-}
 _VALUE_RE = {
-    prop: re.compile(_VALUE + r"\s*(?P<unit>" + unit + r")(?![A-Za-z/])")
-    for prop, unit in _UNITS.items()
+    prop: re.compile(VALUE_PATTERN + r"\s*(?P<unit>" + unit + r")(?![A-Za-z/])")
+    for prop, unit in UNIT_PATTERNS.items()
 }
 _PROXIMITY = 90  # characters after the property name in which its value must appear
 

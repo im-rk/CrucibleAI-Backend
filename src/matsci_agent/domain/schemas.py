@@ -65,3 +65,42 @@ class PropertyRecord(BaseModel):
     excerpt: str = ""
     is_predicted: bool = False
     method: str = "literature"  # literature | Materials Project (DFT) | KRR | offline reference
+
+
+class Criterion(BaseModel):
+    """One requirement parsed from the research goal."""
+    kind: str  # numeric | exclude_elements | measured_evidence | qualitative
+    label: str  # the requirement in words, shown to the user
+    property_name: Optional[str] = None  # canonical key, for numeric criteria
+    operator: Optional[str] = None  # > | >= | < | <= | between
+    value: Optional[float] = None  # in the canonical unit of `property_name`
+    value_high: Optional[float] = None  # upper bound for `between`
+    unit: Optional[str] = None
+    elements: list[str] = Field(default_factory=list)  # for exclude_elements
+
+
+class CriterionResult(BaseModel):
+    """How one candidate fares against one criterion, with the evidence used."""
+    label: str
+    kind: str
+    # met | not_met | missing | predicted_met | predicted_not_met | unverified
+    status: str
+    value: Optional[float] = None
+    unit: str = ""
+    is_predicted: bool = False
+    source: str = ""
+    detail: str = ""
+
+
+class Candidate(BaseModel):
+    """A screened material with per-criterion evidence."""
+    rank: int = 0
+    formula: Optional[str] = None
+    name: str
+    status: str  # qualified | partial | rejected | unscreened
+    score: float
+    origin: str = "literature"  # literature | database
+    criteria: list[CriterionResult] = Field(default_factory=list)
+    flags: list[str] = Field(default_factory=list)
+    sources: list[dict] = Field(default_factory=list)
+    record_count: int = 0
