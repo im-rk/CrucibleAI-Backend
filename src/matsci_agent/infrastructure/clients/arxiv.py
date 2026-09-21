@@ -63,11 +63,9 @@ class ArxivClient:
     def _to_metadata(result: "arxiv.Result") -> PaperMetadata:
         return PaperMetadata(
             arxiv_id=result.entry_id.split("/")[-1],
-            title=result.title.replace("
-", " "),
+            title=result.title.replace("\n", " "),
             authors=[author.name for author in result.authors],
-            abstract=result.summary.replace("
-", " "),
+            abstract=result.summary.replace("\n", " "),
             year=result.published.year,
             doi=result.doi,
         )
