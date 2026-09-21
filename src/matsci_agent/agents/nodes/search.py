@@ -204,20 +204,36 @@ class SearchAgent:
         return HEURISTIC_THRESHOLD if chunk.get("relevance_method") == "heuristic" else self.relevance_threshold
 
     async def _score(self, goal: str, chunks: list[dict], warnings: list[str]) -> tuple[str, float]:
-        """Set `relevance_score` / `relevance_method` on each chunk; return (method, threshold)."""
+        """Set `relevance_score` / `relevance_method` on each chunk; return (method, threshold).
+
+        Batches the LLM couldn't score fall back to the heuristic individually, so one failed
+        batch never discards the rest.
+        """
         if not chunks:
             return ("llm" if self.llm.available else "heuristic"), self._method_threshold(self.llm.available)
+
+        failed: list[dict] = list(chunks)
         if self.llm.available:
-            try:
-                batches = [chunks[i : i + BATCH_SIZE] for i in range(0, len(chunks), BATCH_SIZE)]
-                await asyncio.gather(*(self._score_batch(goal, b) for b in batches))
-                return "llm", self.relevance_threshold
-            except LLMError as exc:
-                warnings.append(f"Relevance scoring fell back to heuristics: {exc}")
-        for chunk in chunks:
+            batches = [chunks[i : i + BATCH_SIZE] for i in range(0, len(chunks), BATCH_SIZE)]
+            results = await asyncio.gather(
+                *(self._score_batch(goal, b) for b in batches), return_exceptions=True
+            )
+            failed = []
+            for batch, result in zip(batches, results):
+                if isinstance(result, LLMError):
+                    failed.extend(batch)
+                    warnings.append(f"Relevance scoring fell back to heuristics: {result}")
+                elif isinstance(result, BaseException):
+                    raise result  # a bug, not an LLM outage: don't mask it
+        for chunk in failed:
             chunk["relevance_score"] = round(heuristic_relevance(goal, chunk), 4)
             chunk["relevance_method"] = "heuristic"
-        return "heuristic", HEURISTIC_THRESHOLD
+
+        if not failed:
+            return "llm", self.relevance_threshold
+        if len(failed) == len(chunks):
+            return "heuristic", HEURISTIC_THRESHOLD
+        return "mixed", self.relevance_threshold
 
     def _method_threshold(self, llm: bool) -> float:
         return self.relevance_threshold if llm else HEURISTIC_THRESHOLD
