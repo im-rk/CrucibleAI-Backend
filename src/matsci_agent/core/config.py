@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     chroma_port: int = Field(default=8000, alias="CHROMA_PORT")
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
 
+    # LLM + agent tuning. Model defaults to the one named in the project spec; override freely.
+    anthropic_model: str = Field(default="claude-sonnet-4-6", alias="ANTHROPIC_MODEL")
+    relevance_threshold: float = Field(default=0.65, alias="RELEVANCE_THRESHOLD")
+    max_retries: int = Field(default=3, alias="MAX_RETRIES")
+    min_relevant_chunks: int = Field(default=5, alias="MIN_RELEVANT_CHUNKS")
+    live_arxiv_fallback: bool = Field(default=True, alias="LIVE_ARXIV_FALLBACK")
+    llm_concurrency: int = Field(default=4, alias="LLM_CONCURRENCY")
+
     # Retrieval tuning (hybrid BM25 + semantic search, optional cross-encoder rerank).
     reranker_enabled: bool = Field(default=False, alias="RERANKER_ENABLED")
     reranker_model: str = Field(

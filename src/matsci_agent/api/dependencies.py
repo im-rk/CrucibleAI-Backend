@@ -9,7 +9,9 @@ from __future__ import annotations
 from functools import lru_cache
 
 from matsci_agent.core.config import settings
+from matsci_agent.infrastructure.clients.arxiv import ArxivClient
 from matsci_agent.infrastructure.clients.mp_api import MaterialsProjectClient
+from matsci_agent.infrastructure.llm.anthropic_client import LLMClient
 from matsci_agent.infrastructure.ml.krr import KRRPropertyPredictor
 from matsci_agent.infrastructure.retrieval.bm25_index import BM25Index
 from matsci_agent.infrastructure.retrieval.hybrid_search import HybridSearch
@@ -30,6 +32,16 @@ def get_hybrid_search() -> HybridSearch:
         CrossEncoderReranker(settings.reranker_model) if settings.reranker_enabled else None
     )
     return HybridSearch(store, bm25=BM25Index(store), reranker=reranker)
+
+
+@lru_cache(maxsize=1)
+def get_llm_client() -> LLMClient:
+    return LLMClient(settings.anthropic_api_key, settings.anthropic_model)
+
+
+@lru_cache(maxsize=1)
+def get_arxiv_client() -> ArxivClient:
+    return ArxivClient()
 
 
 @lru_cache(maxsize=1)
