@@ -12,7 +12,7 @@ PROPERTIES: dict[str, tuple[str, tuple[str, ...]]] = {
     "formation_energy": ("eV/atom", ("formation energy", "formation energy per atom")),
     "energy_above_hull": ("eV/atom", ("energy above hull", "e hull", "hull energy")),
     "density": ("g/cm3", ("density",)),
-    "electrochemical_stability_window": ("V", ("electrochemical stability window", "electrochemical window", "stability window")),
+    "electrochemical_stability_window": ("V", ("electrochemical stability window", "electrochemical window", "stability window", "electrochemical stability")),
     "activation_energy": ("eV", ("activation energy",)),
     "bulk_modulus": ("GPa", ("bulk modulus",)),
     "shear_modulus": ("GPa", ("shear modulus",)),
@@ -44,6 +44,26 @@ UNIT_FACTORS: dict[str, dict[str, float]] = {
     "capacity": {"mah/g": 1.0, "ah/kg": 1.0},
 }
 
+# Regexes for finding 'number unit' pairs in running text (shared by extraction and screening).
+_POWER_DIGITS = r"[-−+]?[\d⁻⁺⁰¹²³⁴⁵⁶⁷⁸⁹]+"
+VALUE_PATTERN = (
+    r"(?P<val>[<>~≈≥≤]?\s*(?:"
+    r"10\s*(?:\^\s*\{?" + _POWER_DIGITS + r"\}?|[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)"  # bare power: 10^-3, 10⁻³
+    r"|\d+(?:\.\d+)?(?:\s*[–-]\s*\d+(?:\.\d+)?)?"  # number or range
+    r"(?:\s*[×xX·*]\s*10\s*\^?\s*\{?" + _POWER_DIGITS + r"\}?|[eE][-+]?\d+)?"  # x 10^n or e-notation
+    r"))"
+)
+UNIT_PATTERNS = {
+    "ionic_conductivity": r"(?:[mµμu]?S\s?/\s?cm|[mµμu]?S\s?cm(?:\^?-1|⁻¹)|S\s?/\s?m)",
+    "bandgap": r"m?eV",
+    "formation_energy": r"(?:eV/atom|meV/atom|kJ/mol)",
+    "density": r"(?:g\s?/\s?cm(?:3|³)|g\s?cm(?:\^?-3|⁻³)|kg\s?/\s?m(?:3|³))",
+    "electrochemical_stability_window": r"V",
+    "activation_energy": r"m?eV",
+    "critical_temperature": r"K",
+    "power_conversion_efficiency": r"%",
+    "capacity": r"(?:mAh\s?/\s?g|mAh\s?g(?:\^?-1|⁻¹))",
+}
 _SUPERSCRIPTS = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺", "0123456789-+")
 _SUPERSCRIPT_RUN = re.compile(r"[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+")
 _NUM = r"\d+(?:\.\d+)?(?:[eE][-+]?\d+)?"
