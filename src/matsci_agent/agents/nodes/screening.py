@@ -80,7 +80,7 @@ def parse_criteria_heuristic(goal: str) -> list[Criterion]:
                     criteria.append(_numeric(prop, op, value, None, unit, label))
                     break
             between = re.search(
-                rf"(?:between|from)\s*(?P<a>[\d.]+)\s*(?:and|to|–|-)\s*(?P<b>[\d.]+)"
+                r"(?:between|from)\s*(?P<a>[\d.]+)\s*(?:and|to|–|-)\s*(?P<b>[\d.]+)"
                 + (rf"(?:\s*(?P<unit>{unit_re}))?" if unit_re else ""),
                 tail, re.IGNORECASE,
             )

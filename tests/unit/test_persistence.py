@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from matsci_agent.infrastructure.db.models import AgentLog, Base, Paper, PropertyRecord
+from matsci_agent.infrastructure.db.models import Base, Paper, PropertyRecord
 from matsci_agent.services.persistence import PersistenceService, PersistenceUnavailable
 
 POSTGRES_URL = os.getenv("TEST_DATABASE_URL")  # e.g. postgresql+asyncpg://postgres:postgres@localhost:55432/matsci_agent
