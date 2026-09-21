@@ -1,8 +1,11 @@
 """Local ChromaDB implementation used during development."""
 
 import logging
-import chromadb
+from collections.abc import Iterator
 from pathlib import Path
+
+import chromadb
+import numpy as np
 from matsci_agent.domain.schemas import PaperChunk
 from matsci_agent.infrastructure.ml.embedder import MaterialsEmbedder
 
@@ -100,4 +103,33 @@ class ChromaVectorStore:
         return chunks
 
     def count(self) -> int:
-        return self.collection.count()
+        return self.collection.count()
+
+    def iter_documents(self, batch_size: int = 500) -> Iterator[dict]:
+        """Yield every stored chunk as {id, text, metadata}; feeds the BM25 index."""
+        offset = 0
+        while True:
+            batch = self.collection.get(
+                limit=batch_size, offset=offset, include=["documents", "metadatas"]
+            )
+            ids = batch["ids"]
+            if not ids:
+                return
+            for i, chunk_id in enumerate(ids):
+                yield {
+                    "id": chunk_id,
+                    "text": batch["documents"][i],
+                    "metadata": batch["metadatas"][i],
+                }
+            offset += len(ids)
+
+    def similarities(self, query: str, ids: list[str]) -> dict[str, float]:
+        """Cosine similarity of the query to specific stored chunks (embeddings are normalised)."""
+        if not ids:
+            return {}
+        query_vec = np.asarray(self.embedder.embed_single(query))
+        got = self.collection.get(ids=ids, include=["embeddings"])
+        return {
+            chunk_id: float(np.dot(query_vec, np.asarray(vec)))
+            for chunk_id, vec in zip(got["ids"], got["embeddings"])
+        }

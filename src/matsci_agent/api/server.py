@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from fastapi import FastAPI, APIRouter, Query, Body
+from typing import Any
+
+from fastapi import Body, FastAPI, Query
+
+from matsci_agent.api.dependencies import get_krr_predictor, get_mp_client, get_vector_store
 from matsci_agent.api.middleware import configure_middleware
 from matsci_agent.api.routers.research import router as research_router
 from matsci_agent.api.routers.stream import router as stream_router
 from matsci_agent.core.config import settings
-from matsci_agent.infrastructure.ml.krr import KRRPropertyPredictor
-from matsci_agent.infrastructure.clients.mp_api import MaterialsProjectClient
-from matsci_agent.infrastructure.vector_store.chromadb import ChromaVectorStore
 
 def create_app() -> FastAPI:
     """Build and configure the FastAPI application."""
@@ -24,7 +25,7 @@ def create_app() -> FastAPI:
     # Health & System Status Endpoint
     @app.get("/api/health")
     async def health_check() -> dict[str, Any]:
-        vector_store = ChromaVectorStore()
+        vector_store = get_vector_store()
         return {
             "status": "online",
             "app_name": settings.app_name,
@@ -40,14 +41,12 @@ def create_app() -> FastAPI:
         formula: str = Body(..., embed=True),
         property_name: str = Body(default="band_gap", embed=True),
     ) -> dict[str, Any]:
-        predictor = KRRPropertyPredictor()
-        return predictor.predict(formula, property_name=property_name)
+        return get_krr_predictor().predict(formula, property_name=property_name)
 
     # Direct Materials Project Lookup & Screening
     @app.get("/api/materials/lookup")
     async def lookup_material(formula: str = Query(...)) -> dict[str, Any]:
-        mp_client = MaterialsProjectClient()
-        props = mp_client.get_properties(formula)
+        props = get_mp_client().get_properties(formula)
         return {
             "formula": formula,
             "properties": [
@@ -66,7 +65,7 @@ def create_app() -> FastAPI:
     # Paper Corpus Statistics
     @app.get("/api/corpus")
     async def get_corpus_stats() -> dict[str, Any]:
-        vector_store = ChromaVectorStore()
+        vector_store = get_vector_store()
         total_chunks = vector_store.count()
         sample_results = vector_store.search("solid state electrolyte", n_results=5)
         return {

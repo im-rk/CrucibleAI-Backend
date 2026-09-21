@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 import logging
 from typing import Any
 
 from matsci_agent.domain.schemas import ResearchRequest
-from matsci_agent.infrastructure.vector_store.chromadb import ChromaVectorStore
 from matsci_agent.infrastructure.clients.mp_api import MaterialsProjectClient
 from matsci_agent.infrastructure.ml.krr import KRRPropertyPredictor
+from matsci_agent.infrastructure.retrieval.hybrid_search import HybridSearch
 
 logger = logging.getLogger(__name__)
 
@@ -17,24 +18,32 @@ logger = logging.getLogger(__name__)
 class ResearchService:
     """Coordinates agent execution across literature, materials DB, and KRR prediction."""
 
-    def __init__(self) -> None:
-        self.vector_store = ChromaVectorStore()
-        self.mp_client = MaterialsProjectClient()
-        self.krr_predictor = KRRPropertyPredictor()
+    def __init__(
+        self,
+        search: HybridSearch,
+        mp_client: MaterialsProjectClient,
+        krr_predictor: KRRPropertyPredictor,
+    ) -> None:
+        self.search = search
+        self.mp_client = mp_client
+        self.krr_predictor = krr_predictor
 
     async def run(self, request: ResearchRequest) -> dict[str, Any]:
         session_id = str(uuid.uuid4())
         logger.info(f"Starting research run {session_id} for query: '{request.query}'")
 
-        # Phase 1: Vector Store Search
+        # Phase 1: Hybrid Search (semantic + BM25, fused with RRF)
         retrieved_chunks = []
         try:
-            retrieved = self.vector_store.search(request.query, n_results=request.max_results)
+            retrieved = await asyncio.to_thread(
+                self.search.search, request.query, request.max_results
+            )
             for chunk in retrieved:
                 retrieved_chunks.append({
                     "id": chunk["id"],
                     "text": chunk["text"],
                     "similarity": round(float(chunk["similarity"]), 4),
+                    "rrf_score": chunk.get("rrf_score"),
                     "metadata": chunk["metadata"],
                 })
         except Exception as exc:
@@ -92,7 +101,7 @@ class ResearchService:
             "krr_predictions": krr_predictions,
             "hypothesis": hypothesis,
             "agent_logs": [
-                {"step": "LITERATURE_SEARCH", "details": f"Retrieved {len(retrieved_chunks)} relevant paper chunks from ChromaDB persistence."},
+                {"step": "LITERATURE_SEARCH", "details": f"Retrieved {len(retrieved_chunks)} paper chunks via hybrid (semantic + BM25) search."},
                 {"step": "MATERIALS_PROJECT_LOOKUP", "details": f"Queried Materials Project API for formulas: {', '.join(candidate_formulas)}."},
                 {"step": "KRR_PREDICTION", "details": "Computed Magpie composition features and executed Kernel Ridge Regression RBF model."},
                 {"step": "SYNTHESIS", "details": "Synthesized candidate comparison matrix and generated final research hypothesis."},
