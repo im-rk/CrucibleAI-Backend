@@ -1,5 +1,6 @@
-# Keep the Docker build context small and predictable.
+# Keep the Docker build context small; data directories are mounted as volumes.
 .git
+.github
 .venv
 __pycache__
 .pytest_cache
@@ -7,5 +8,13 @@ __pycache__
 .ruff_cache
 .env
 .env.*
+!.env.example
 tests
-docs
+evaluation/results.json
+chroma_db
+papers
+models
+src/chroma_db
+src/models
+*.md
+!README.md

@@ -1,33 +1,54 @@
-# Local development stack for the API, PostgreSQL, and ChromaDB.
+# Backend + PostgreSQL. Add the web UI with:  docker compose --profile full up --build
+# (expects the frontend repo next to this one, as ../CrucibleAI-Frontend).
 services:
   api:
     build: .
     ports:
       - "8000:8000"
     env_file:
-      - .env
+      - path: .env
+        required: false
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: matsci_agent
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./papers:/app/papers
+      - ./models:/app/models
+      - hf_cache:/app/.cache
     depends_on:
-      - postgres
-      - chromadb
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
 
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
     environment:
       POSTGRES_DB: matsci_agent
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d matsci_agent"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
 
-  chromadb:
-    image: chromadb/chroma:latest
+  frontend:
+    profiles: ["full"]
+    build: ../CrucibleAI-Frontend
+    environment:
+      API_UPSTREAM: http://api:8000
     ports:
-      - "8001:8000"
-    volumes:
-      - chroma_data:/chroma/chroma
+      - "8080:80"
+    depends_on:
+      - api
 
 volumes:
   postgres_data:
-  chroma_data:
+  hf_cache:
