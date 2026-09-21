@@ -45,4 +45,23 @@ class MaterialProperty(BaseModel):
     is_direct_gap: Optional[bool] = None
     is_predicted: bool = False
     confidence: str = "high"
-
+
+
+
+class PropertyRecord(BaseModel):
+    """One material property, with provenance, ready for screening."""
+    material_name: str
+    material_formula: Optional[str] = None
+    property_name: str  # canonical key, e.g. "ionic_conductivity"
+    value_raw: str
+    value_numeric: Optional[float] = None
+    unit: str = ""  # canonical unit once normalised
+    conditions: str = ""
+    source_title: str = ""
+    source_doi: str = ""
+    source_id: str = ""  # arXiv id or Materials Project id
+    chunk_id: Optional[str] = None
+    confidence: str = "medium"  # high | medium | low
+    excerpt: str = ""
+    is_predicted: bool = False
+    method: str = "literature"  # literature | Materials Project (DFT) | KRR | offline reference

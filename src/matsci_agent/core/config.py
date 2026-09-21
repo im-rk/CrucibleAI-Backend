@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     chroma_port: int = Field(default=8000, alias="CHROMA_PORT")
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
 
+    materials_project_api_key: str | None = Field(default=None, alias="MATERIALS_PROJECT_API_KEY")
+
     # LLM + agent tuning. Model defaults to the one named in the project spec; override freely.
     anthropic_model: str = Field(default="claude-sonnet-4-6", alias="ANTHROPIC_MODEL")
     relevance_threshold: float = Field(default=0.65, alias="RELEVANCE_THRESHOLD")
