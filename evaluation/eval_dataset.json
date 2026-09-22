@@ -1,0 +1,25 @@
+{
+  "description": "20 materials-science questions with reference answers taken from standard, well-established values. The reference answers do NOT come from the ingested paper corpus, so context recall reflects how much of each answer the corpus can actually support; review them against your own corpus and extend the file as it grows.",
+  "questions": [
+    {"id": "q01", "category": "bandgap", "question": "What is the approximate room-temperature band gap of GaN, and is it direct or indirect?", "ground_truth": "About 3.4 eV, and it is a direct band gap."},
+    {"id": "q02", "category": "bandgap", "question": "What is the band gap of crystalline silicon and is it direct or indirect?", "ground_truth": "About 1.12 eV, and it is an indirect band gap."},
+    {"id": "q03", "category": "bandgap", "question": "What is the room-temperature band gap of germanium?", "ground_truth": "About 0.66 eV, and it is an indirect band gap."},
+    {"id": "q04", "category": "bandgap", "question": "What is the room-temperature band gap of gallium arsenide (GaAs)?", "ground_truth": "About 1.42 eV, and it is a direct band gap."},
+    {"id": "q05", "category": "bandgap", "question": "What is the band gap of wurtzite ZnO?", "ground_truth": "About 3.37 eV, and it is a direct band gap."},
+    {"id": "q06", "category": "bandgap", "question": "What is the band gap of anatase TiO2?", "ground_truth": "About 3.2 eV (rutile is lower, about 3.0 eV)."},
+    {"id": "q07", "category": "photovoltaics", "question": "What is the approximate band gap of the hybrid perovskite methylammonium lead iodide (MAPbI3)?", "ground_truth": "About 1.5 to 1.6 eV, and it is a direct band gap."},
+    {"id": "q08", "category": "photovoltaics", "question": "What is the band gap of the black (alpha) phase of CsPbI3?", "ground_truth": "About 1.7 eV."},
+    {"id": "q09", "category": "photovoltaics", "question": "What single-junction solar cell band gap is close to optimal according to the Shockley-Queisser limit?", "ground_truth": "About 1.3 to 1.4 eV, giving a maximum efficiency of roughly 33 percent."},
+    {"id": "q10", "category": "electrolytes", "question": "What crystal structure family does the solid electrolyte Li7La3Zr2O12 (LLZO) belong to, and what conductivity does its cubic phase reach at room temperature?", "ground_truth": "LLZO is a garnet-type oxide. Its cubic phase, usually stabilised by Al, Ga or Ta doping, reaches a lithium-ion conductivity on the order of 10^-4 to 10^-3 S/cm at room temperature."},
+    {"id": "q11", "category": "electrolytes", "question": "What room-temperature lithium-ion conductivity was reported for the sulfide electrolyte Li10GeP2S12 (LGPS)?", "ground_truth": "About 1.2 x 10^-2 S/cm (12 mS/cm) at room temperature."},
+    {"id": "q12", "category": "electrolytes", "question": "What is the electrochemical stability window of a solid electrolyte?", "ground_truth": "The voltage range over which the electrolyte is neither oxidised nor reduced, so it does not decompose in contact with the electrodes."},
+    {"id": "q13", "category": "batteries", "question": "What is the theoretical specific capacity of a graphite anode in a lithium-ion battery?", "ground_truth": "About 372 mAh/g, corresponding to LiC6."},
+    {"id": "q14", "category": "batteries", "question": "What is the theoretical specific capacity of the LiFePO4 cathode?", "ground_truth": "About 170 mAh/g."},
+    {"id": "q15", "category": "batteries", "question": "What practical capacity does the LiCoO2 cathode deliver, and why is it lower than the theoretical value?", "ground_truth": "About 140 mAh/g in practice against a theoretical value of roughly 274 mAh/g, because only about half of the lithium can be removed reversibly before the structure degrades."},
+    {"id": "q16", "category": "superconductors", "question": "What is the superconducting critical temperature of YBa2Cu3O7 (YBCO)?", "ground_truth": "About 92 to 93 K, above the boiling point of liquid nitrogen."},
+    {"id": "q17", "category": "superconductors", "question": "What is the superconducting critical temperature of MgB2?", "ground_truth": "About 39 K."},
+    {"id": "q18", "category": "computational", "question": "What does an energy above hull of 0 eV/atom mean in Materials Project data?", "ground_truth": "The material is thermodynamically stable: it lies on the convex hull and does not decompose into competing phases."},
+    {"id": "q19", "category": "computational", "question": "Why do semi-local DFT functionals such as PBE underestimate band gaps?", "ground_truth": "Semi-local functionals suffer from self-interaction error and lack the derivative discontinuity of the exchange-correlation energy, so they systematically underestimate the fundamental gap."},
+    {"id": "q20", "category": "computational", "question": "What does the RBF kernel measure in kernel ridge regression?", "ground_truth": "The similarity between two samples, which decays exponentially with their squared distance: k(x, x') = exp(-gamma * ||x - x'||^2)."}
+  ]
+}

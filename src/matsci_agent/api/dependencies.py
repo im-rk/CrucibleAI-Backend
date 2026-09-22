@@ -24,6 +24,7 @@ from matsci_agent.infrastructure.retrieval.bm25_index import BM25Index
 from matsci_agent.infrastructure.retrieval.hybrid_search import HybridSearch
 from matsci_agent.infrastructure.retrieval.reranker import CrossEncoderReranker
 from matsci_agent.infrastructure.vector_store.chromadb import ChromaVectorStore
+from matsci_agent.infrastructure.vector_store.pinecone import PineconeVectorStore
 from matsci_agent.services.grounding import GroundingChecker
 from matsci_agent.services.papers_srv import PaperCatalog
 from matsci_agent.services.persistence import PersistenceService
@@ -31,7 +32,14 @@ from matsci_agent.services.research_srv import ResearchService
 
 
 @lru_cache(maxsize=1)
-def get_vector_store() -> ChromaVectorStore:
+def get_vector_store() -> ChromaVectorStore | PineconeVectorStore:
+    if settings.vector_store == "pinecone":
+        return PineconeVectorStore(
+            settings.pinecone_api_key, settings.pinecone_index,
+            cloud=settings.pinecone_cloud, region=settings.pinecone_region,
+        )
+    if settings.vector_store != "chroma":
+        raise ValueError(f"VECTOR_STORE must be 'chroma' or 'pinecone', not '{settings.vector_store}'")
     return ChromaVectorStore()
 
 
@@ -41,7 +49,9 @@ def get_hybrid_search() -> HybridSearch:
     reranker = (
         CrossEncoderReranker(settings.reranker_model) if settings.reranker_enabled else None
     )
-    return HybridSearch(store, bm25=BM25Index(store), reranker=reranker)
+    # BM25 needs every document; stores that cannot list them (Pinecone) get semantic-only search.
+    bm25 = BM25Index(store) if getattr(store, "supports_listing", True) else None
+    return HybridSearch(store, bm25=bm25, reranker=reranker)
 
 
 @lru_cache(maxsize=1)

@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends
 from matsci_agent import __version__
 from matsci_agent.api.dependencies import get_paper_catalog, get_persistence, runtime_mode
 from matsci_agent.core.config import settings
-from matsci_agent.services.papers_srv import PaperCatalog
+from matsci_agent.services.papers_srv import ListingUnsupported, PaperCatalog
 from matsci_agent.services.persistence import PersistenceService
 
 router = APIRouter(tags=["system"])
@@ -37,6 +37,13 @@ async def health_check(
     }
 
 
+def _sample(catalog: PaperCatalog) -> list[dict]:
+    try:
+        return catalog.list(limit=5)["papers"]
+    except ListingUnsupported:
+        return []
+
+
 @router.get("/corpus")
 def corpus_stats(catalog: PaperCatalog = Depends(get_paper_catalog)) -> dict:
     stats = catalog.stats()
@@ -47,6 +54,6 @@ def corpus_stats(catalog: PaperCatalog = Depends(get_paper_catalog)) -> dict:
                 "id": p["arxiv_id"], "arxiv_id": p["arxiv_id"], "title": p["title"],
                 "section": ", ".join(p["sections"][:2]), "year": p["year"], "snippet": p["snippet"],
             }
-            for p in catalog.list(limit=5)["papers"]
+            for p in _sample(catalog)
         ],
     }
