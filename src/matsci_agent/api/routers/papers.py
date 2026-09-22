@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from matsci_agent.api.dependencies import get_paper_catalog
-from matsci_agent.services.papers_srv import PaperCatalog
+from matsci_agent.services.papers_srv import ListingUnsupported, PaperCatalog
 
 router = APIRouter(tags=["papers"])
 
@@ -17,12 +17,18 @@ def list_papers(
     offset: int = Query(0, ge=0),
     catalog: PaperCatalog = Depends(get_paper_catalog),
 ) -> dict:
-    return catalog.list(q, limit, offset)
+    try:
+        return catalog.list(q, limit, offset)
+    except ListingUnsupported as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
 
 
 @router.get("/papers/{arxiv_id}")
 def get_paper(arxiv_id: str, catalog: PaperCatalog = Depends(get_paper_catalog)) -> dict:
-    paper = catalog.get(arxiv_id)
+    try:
+        paper = catalog.get(arxiv_id)
+    except ListingUnsupported as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
     if paper is None:
         raise HTTPException(status_code=404, detail=f"Paper '{arxiv_id}' is not in the corpus.")
     return paper

@@ -93,6 +93,32 @@ curl -N -X POST localhost:8000/api/research/stream -H 'Content-Type: application
   -d '{"query": "perovskite solar cell bandgap"}'
 ```
 
+## Evaluation
+
+```bash
+python evaluation/run_eval.py --limit 5     # cheap trial
+python evaluation/run_eval.py               # all 20 questions
+```
+
+Compares plain RAG with the agentic retrieval (relevance filtering + re-retrieval) on
+`evaluation/eval_dataset.json`. Both use the same hybrid search, answer prompt and judge, so the
+difference isolates what the agent adds. Reports faithfulness, answer relevancy, context precision
+and context recall to `evaluation/results.json`. It needs `ANTHROPIC_API_KEY` (answers and judgements
+are LLM calls, roughly 6-8 per question per system) and refuses to run without one.
+
+Read the numbers with these caveats: the metrics follow the RAGAS definitions but are judged by the
+project's own LLM client rather than the `ragas` library, so they are comparable between the two
+systems here but not to published RAGAS scores; and the 20 reference answers are standard textbook
+values, not derived from your corpus, so context recall mostly measures corpus coverage. No results
+are checked in: run it to get your own numbers.
+
+## Pinecone (production vector store)
+
+Set `VECTOR_STORE=pinecone` and `PINECONE_API_KEY`, `pip install pinecone`, and copy the local
+corpus over with `python scripts/migrate_to_pinecone.py`. With Pinecone the pipeline uses semantic
+search only (no BM25) and `/api/papers` answers 501. The adapter is tested against a fake client
+but has **not been run against the live service**.
+
 ## Layout
 
 ```
@@ -103,7 +129,8 @@ src/matsci_agent/
   services/          research service (streaming), grounding, report builder, persistence, paper catalogue
   api/               FastAPI app, routers, CORS
 alembic/             database migrations
-scripts/             ingest_papers, train_krr, run_research, verify_setup
+scripts/             ingest_papers, train_krr, run_research, verify_setup, migrate_to_pinecone
+evaluation/          eval dataset and the plain-RAG vs agentic comparison
 tests/               unit + integration (incl. an end-to-end run of the real graph)
 ```
 

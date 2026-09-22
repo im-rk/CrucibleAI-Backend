@@ -1,6 +1,6 @@
 """Pydantic models that define the API and internal data contracts."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel,Field
 
@@ -13,7 +13,7 @@ class PaperMetadata(BaseModel):
     year: int
     doi : Optional[str] = None
     pdf_path: Optional[str] = None
-    ingested_at: datetime = Field(default_factory=datetime.utcnow)
+    ingested_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class PaperChunk(BaseModel):
     """Contract for a searchable chunk stored in ChromaDb"""

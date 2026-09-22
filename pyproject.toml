@@ -35,6 +35,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+pinecone = [
+  "pinecone>=5",
+]
 dev = [
   "aiosqlite>=0.20",
   "mypy>=1.11",

@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     persistence_enabled: bool = Field(default=True, alias="PERSISTENCE_ENABLED")
 
+    # Vector store: embedded ChromaDB for development, Pinecone for production.
+    vector_store: str = Field(default="chroma", alias="VECTOR_STORE")
+    pinecone_api_key: str | None = Field(default=None, alias="PINECONE_API_KEY")
+    pinecone_index: str = Field(default="crucible-papers", alias="PINECONE_INDEX")
+    pinecone_cloud: str = Field(default="aws", alias="PINECONE_CLOUD")
+    pinecone_region: str = Field(default="us-east-1", alias="PINECONE_REGION")
+
     # Retrieval tuning (hybrid BM25 + semantic search, optional cross-encoder rerank).
     reranker_enabled: bool = Field(default=False, alias="RERANKER_ENABLED")
     reranker_model: str = Field(
