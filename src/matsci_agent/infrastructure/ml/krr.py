@@ -17,7 +17,7 @@ from typing import Optional
 import joblib
 import numpy as np
 from sklearn.kernel_ridge import KernelRidge
-from sklearn.model_selection import cross_val_predict
+from sklearn.model_selection import KFold, cross_val_predict
 from sklearn.preprocessing import StandardScaler
 
 from matsci_agent.domain.reference_data import OFFLINE_BANDGAPS
@@ -124,7 +124,9 @@ class KRRPropertyPredictor:
         r2 = rmse = None
         folds = min(5, len(y))
         if folds >= 3:
-            predicted = cross_val_predict(model, X_scaled, y, cv=folds)
+            # Shuffled folds: training data can arrive sorted (MP returns formulas alphabetically),
+            # and contiguous folds would then each be a different slice of chemistry.
+            predicted = cross_val_predict(model, X_scaled, y, cv=KFold(folds, shuffle=True, random_state=0))
             rmse = float(np.sqrt(np.mean((predicted - y) ** 2)))
             ss_tot = float(np.sum((y - np.mean(y)) ** 2))
             r2 = float(1 - np.sum((predicted - y) ** 2) / ss_tot) if ss_tot > 0 else None
@@ -151,18 +153,36 @@ class KRRPropertyPredictor:
             raise ValueError("A Materials Project API key is required to train from Materials Project data.")
         from mp_api.client import MPRester
 
+        # Experimentally known, (near-)stable materials only; hypothetical polymorphs add noise. MP
+        # returns results alphabetically and cannot sort, so fetch a larger pool, keep the ground
+        # state per formula (duplicate formulas have identical features), and sample at random.
+        pool = max(3 * n_samples, 1000)
         query: dict = {
-            "fields": ["formula_pretty", key],
-            "num_chunks": max(1, math.ceil(n_samples / 100)),
-            "chunk_size": 100,
+            "fields": ["formula_pretty", "energy_above_hull", key],
+            "theoretical": False,
+            "energy_above_hull": (0.0, 0.05),
+            "num_chunks": math.ceil(pool / 1000),
+            "chunk_size": 1000,
         }
         if key == "band_gap":
             query["band_gap"] = (0.1, 10.0)  # materials with a non-zero gap
         with MPRester(api_key) as mpr:
-            docs = mpr.summary.search(**query)
+            summary = getattr(getattr(mpr, "materials", None), "summary", None) or mpr.summary
+            docs = list(summary.search(**query))
+
+        best: dict[str, object] = {}
+        for doc in docs:
+            if getattr(doc, key, None) is None:
+                continue
+            current = best.get(doc.formula_pretty)
+            if current is None or (getattr(doc, "energy_above_hull", 0) or 0) < (getattr(current, "energy_above_hull", 0) or 0):
+                best[doc.formula_pretty] = doc
+        candidates = list(best.values())
+        rng = np.random.default_rng(0)
+        chosen = [candidates[i] for i in rng.permutation(len(candidates))[:n_samples]]
 
         features, targets = [], []
-        for doc in list(docs)[:n_samples]:
+        for doc in chosen:
             target = getattr(doc, key, None)
             vec = self.compute_features(doc.formula_pretty) if target is not None else None
             if vec is not None and not np.any(np.isnan(vec)):
@@ -240,7 +260,12 @@ class KRRPropertyPredictor:
                 f"Machine-learning estimate trained on {n} "
                 f"{'Materials Project materials' if from_mp else 'reference/custom data points'}"
                 f"{'' if rmse is None else f' (cross-validated RMSE ±{rmse:.2f} {UNITS[key]})'}. "
-                "Not a measurement; verify with DFT or experiment."
+                + (
+                    # MP band gaps are PBE-DFT values, which underestimate measured gaps (~40%).
+                    "It predicts the PBE-DFT band gap, which typically underestimates the measured gap. "
+                    if from_mp and key == "band_gap" else ""
+                )
+                + "Not a measurement; verify with DFT or experiment."
             ),
         }
 
