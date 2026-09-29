@@ -90,6 +90,7 @@ def runtime_mode() -> dict:
     llm = get_llm_client()
     return {
         "llm": llm.model if llm.available else None,
+        "llm_unavailable_reason": llm.unavailable_reason,
         "materials_project": "live" if get_mp_client().online else "offline",
     }
 

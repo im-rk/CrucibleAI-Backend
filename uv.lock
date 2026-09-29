@@ -2534,6 +2534,7 @@ dependencies = [
     { name = "sentence-transformers" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "structlog" },
+    { name = "truststore" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -2580,6 +2581,7 @@ requires-dist = [
     { name = "sentence-transformers", specifier = ">=3.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
     { name = "structlog", specifier = ">=24.4" },
+    { name = "truststore", specifier = ">=0.9" },
     { name = "types-python-dateutil", marker = "extra == 'dev'", specifier = ">=2.9.0.20240706" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
 ]

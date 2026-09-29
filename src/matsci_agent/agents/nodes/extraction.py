@@ -128,7 +128,7 @@ class ExtractionAgent:
         papers = {c["metadata"].get("arxiv_id", c["id"]) for c in chunks}
         await emit(config, "extraction_start", chunks=len(chunks), papers=len(papers))
         if not self.llm.available:
-            warnings.append("LLM not configured: property extraction used low-confidence regex heuristics.")
+            warnings.append("LLM unavailable: property extraction used low-confidence regex heuristics.")
 
         outcomes = await asyncio.gather(
             *(self._extract_chunk(c, warnings) for c in chunks), return_exceptions=True

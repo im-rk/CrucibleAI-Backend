@@ -228,7 +228,7 @@ class ScreeningAgent:
             except LLMError as exc:
                 warnings.append(f"Criteria parsing fell back to regex heuristics: {exc}")
         else:
-            warnings.append("LLM not configured: screening criteria were parsed with regex heuristics and may be incomplete.")
+            warnings.append("LLM unavailable: screening criteria were parsed with regex heuristics and may be incomplete.")
         return parse_criteria_heuristic(goal)
 
     # ---- candidates --------------------------------------------------------------------
@@ -263,7 +263,7 @@ class ScreeningAgent:
                 continue
             record = PropertyRecord(
                 material_name=formula, material_formula=formula, property_name="bandgap",
-                value_raw=f"{row['bandgap_eV']} eV", value_numeric=float(row["bandgap_eV"]), unit="eV",
+                value_raw=f"{round(float(row['bandgap_eV']), 4)} eV", value_numeric=round(float(row["bandgap_eV"]), 4), unit="eV",
                 source_title=row.get("source", "Materials Project"), source_id=row["material_id"],
                 confidence="high" if self.mp_client.online else "medium", method=method,
             )

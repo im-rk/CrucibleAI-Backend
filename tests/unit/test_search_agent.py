@@ -163,7 +163,7 @@ async def test_no_llm_configured_warns_and_still_searches() -> None:
         initial_state("ionic conductivity")
     )
     assert out["search_queries"] == ["ionic conductivity"]
-    assert any("LLM not configured" in w for w in out["warnings"])
+    assert any("LLM unavailable" in w for w in out["warnings"])
     with pytest.raises(LLMError):
         await llm.structured("x", SearchQueries)
 

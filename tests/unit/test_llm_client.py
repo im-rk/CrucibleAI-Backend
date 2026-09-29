@@ -88,3 +88,34 @@ async def test_unconfigured_client_reports_unavailable() -> None:
     assert client.available is False
     with pytest.raises(LLMError, match="not configured"):
         await client.structured("x", Answer)
+
+
+async def test_no_credits_disables_the_client_after_one_call(stub_api) -> None:
+    stub_api["status"] = 400
+    stub_api["body"] = {"type": "error", "error": {"type": "invalid_request_error",
+                        "message": "Your credit balance is too low to access the Anthropic API."}}
+    client = LLMClient(api_key="test-key", model="m", max_retries=0)
+    with pytest.raises(LLMError, match="no credits"):
+        await client.structured("x", Answer)
+    assert client.available is False and "no credits" in client.unavailable_reason
+    with pytest.raises(LLMError, match="no credits"):
+        await client.structured("x", Answer)
+    assert len(stub_api["requests"]) == 1  # the second call never reached the API
+
+
+async def test_a_rejected_key_disables_the_client(stub_api) -> None:
+    stub_api["status"] = 401
+    stub_api["body"] = {"type": "error", "error": {"type": "authentication_error", "message": "invalid x-api-key"}}
+    client = LLMClient(api_key="bad-key", model="m", max_retries=0)
+    with pytest.raises(LLMError, match="rejected the API key"):
+        await client.structured("x", Answer)
+    assert client.available is False
+
+
+async def test_an_ordinary_bad_request_does_not_disable_the_client(stub_api) -> None:
+    stub_api["status"] = 400
+    stub_api["body"] = {"type": "error", "error": {"type": "invalid_request_error", "message": "prompt is too long"}}
+    client = LLMClient(api_key="test-key", model="m", max_retries=0)
+    with pytest.raises(LLMError, match="Anthropic API error"):
+        await client.structured("x", Answer)
+    assert client.available is True  # a bad prompt is not an account problem

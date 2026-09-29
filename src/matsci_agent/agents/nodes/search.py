@@ -172,7 +172,7 @@ class SearchAgent:
             except LLMError as exc:
                 warnings.append(f"Query generation fell back to heuristics: {exc}")
         else:
-            warnings.append("LLM not configured: using the research goal as the search query.")
+            warnings.append("LLM unavailable: using the research goal as the search query.")
         terms = " ".join(keywords(goal))
         return [goal] if terms == goal.lower() or not terms else [goal, terms]
 
