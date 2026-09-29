@@ -57,7 +57,10 @@ class ArxivClient:
         search = arxiv.Search(
             query=query, max_results=max_results, sort_by=arxiv.SortCriterion.Relevance
         )
-        return [self._to_metadata(r) for r in arxiv.Client().results(search)]
+        # Ask for only what is needed (the default page is 100 results) and do not hammer arXiv
+        # with retries when it rate-limits us: this runs inside a live research request.
+        client = arxiv.Client(page_size=max_results, num_retries=1)
+        return [self._to_metadata(r) for r in client.results(search)]
 
     @staticmethod
     def _to_metadata(result: "arxiv.Result") -> PaperMetadata:

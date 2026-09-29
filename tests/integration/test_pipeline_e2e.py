@@ -111,7 +111,7 @@ async def test_full_pipeline_produces_a_grounded_ranked_report(service) -> None:
 
     # Honest about running without an LLM / MP key.
     assert report["mode"] == {"llm": None, "materials_project": "offline"}
-    assert any("LLM not configured" in w for w in report["warnings"])
+    assert any("LLM unavailable" in w for w in report["warnings"])
     assert len(report["warnings"]) == len(set(report["warnings"]))  # deduplicated
 
     # Hypotheses exist, are cited, and passed the grounding check.

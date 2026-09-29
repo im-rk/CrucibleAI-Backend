@@ -10,6 +10,8 @@ ELEMENTS = frozenset(
     "Gd Tb Dy Ho Er Tm Yb Lu Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa U Np "
     "Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og".split()
 )
+# No stable isotopes: never suggested as practical candidates.
+RADIOACTIVE = frozenset("Tc Pm Po At Rn Fr Ra Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr".split())
 # Sc, Y and the lanthanides: the usual definition of "rare earth elements".
 RARE_EARTH = frozenset("Sc Y La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu".split())
 

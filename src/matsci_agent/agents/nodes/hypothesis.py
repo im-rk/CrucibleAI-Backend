@@ -81,7 +81,7 @@ class HypothesisAgent:
                 warnings.append(f"Hypothesis generation fell back to templates: {exc}")
         elif not self.llm.available:
             warnings.append(
-                "LLM not configured: hypotheses are template-based pattern summaries, not model reasoning."
+                "LLM unavailable: hypotheses are template-based pattern summaries, not model reasoning."
             )
         if hypotheses is None:
             hypotheses = self._template_hypotheses(top, candidates, criteria, evidence)

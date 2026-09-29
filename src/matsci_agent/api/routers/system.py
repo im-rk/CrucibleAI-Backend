@@ -32,7 +32,7 @@ async def health_check(
         "materials_project_api": (
             "live API" if mode["materials_project"] == "live" else "offline reference table (no API key)"
         ),
-        "llm": mode["llm"] or "not configured (heuristic mode)",
+        "llm": mode["llm"] or f"unavailable, heuristic mode ({mode['llm_unavailable_reason']})",
         "database": await store.ping(),
     }
 

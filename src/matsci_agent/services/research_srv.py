@@ -61,7 +61,8 @@ class ResearchService:
                     )
                     report = build_report(
                         state, session_id=session_id, query=request.query,
-                        max_results=request.max_results, mode=mode,
+                        # recomputed: the LLM may have been disabled mid-run (e.g. no credits)
+                        max_results=request.max_results, mode=self.mode(),
                         duration_ms=int((perf_counter() - started) * 1000),
                     )
                 if self.persistence:

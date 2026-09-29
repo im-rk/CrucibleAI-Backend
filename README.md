@@ -171,4 +171,12 @@ bundled nginx already disables response buffering for the SSE endpoint.
 - `claude-sonnet-4-6` is the model named in the project spec; set `ANTHROPIC_MODEL` to use another.
 - The Materials Project citation DOI shown for database values is Jain et al., *APL Materials* 2013
   (`10.1063/1.4812323`).
-- Network note: on networks that intercept TLS, arXiv PDF downloads may need `ARXIV_VERIFY_SSL=false`.
+- Network note: HTTPS is verified against the operating system's certificate store (`USE_SYSTEM_CERTS=true`),
+  which fixes `CERTIFICATE_VERIFY_FAILED` behind TLS-inspecting proxies or antivirus without disabling
+  verification.
+- Materials Project lookups use the **ground state** (lowest energy above hull) of each formula; the
+  database seed for thin literature only considers experimentally known structures (`theoretical=False`)
+  without radioactive elements. Band gaps from Materials Project are PBE DFT values and are typically
+  underestimated (GaN: 1.74 eV vs 3.4 eV measured), which is why literature values take priority.
+- If Anthropic rejects the account (no credits, invalid key), the pipeline makes one failing call, switches
+  to heuristic mode for the rest of the process, and reports the reason in `/api/health` and the report `mode`.
