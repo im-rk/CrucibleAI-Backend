@@ -4,8 +4,8 @@ Same interface as the Chroma store for what the pipeline needs: add_chunks, sear
 similarities. Pinecone has no cheap "list every document", so `iter_documents` is unsupported:
 with Pinecone the pipeline uses semantic search only (no BM25) and the paper catalogue is off.
 
-Not verified against the live service (no Pinecone account was available when this was written);
-it is tested against a fake client that follows the documented `pinecone` client API.
+Verified against the live service (pinecone client 10): search results and similarity scores match
+the Chroma store on the same corpus. Unit tests use a fake client.
 """
 
 from __future__ import annotations
