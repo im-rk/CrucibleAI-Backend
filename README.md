@@ -168,6 +168,11 @@ bundled nginx already disables response buffering for the SSE endpoint.
 - KRR predictions are estimates. Each reports its cross-validated uncertainty; only a model trained
   on Materials Project data (`--source mp`) can reach "medium" confidence, and a predicted value can
   never make a candidate "qualified".
+- The shipped band-gap model (`models/krr_band_gap.*`) was trained on 1,500 experimentally known,
+  near-stable Materials Project materials with Magpie features: cross-validated R² 0.68, RMSE ±0.93 eV.
+  It predicts the **PBE-DFT** band gap, which underestimates measured gaps (GaN: 1.97 eV predicted,
+  1.74 eV DFT, 3.4 eV measured); each prediction's note says so. Retrain with
+  `python scripts/train_krr.py --source mp --samples 1500`.
 - `claude-sonnet-4-6` is the model named in the project spec; set `ANTHROPIC_MODEL` to use another.
 - The Materials Project citation DOI shown for database values is Jain et al., *APL Materials* 2013
   (`10.1063/1.4812323`).

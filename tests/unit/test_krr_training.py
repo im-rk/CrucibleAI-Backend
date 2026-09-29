@@ -94,6 +94,7 @@ def test_training_from_materials_project_marks_the_source(predictor, monkeypatch
     predictor.train_from_materials_project("band_gap", n_samples=50, api_key="key")
     assert predictor.meta["band_gap"]["source"] == "materials_project"
     assert predictor.predict("GaN", "band_gap")["training_source"] == "materials_project"
+    assert "underestimates the measured gap" in predictor.predict("GaN", "band_gap")["note"]
 
 
 def test_mp_training_needs_a_key_a_known_property_and_enough_data(predictor, monkeypatch) -> None:
@@ -104,3 +105,36 @@ def test_mp_training_needs_a_key_a_known_property_and_enough_data(predictor, mon
     _fake_mp(monkeypatch, [types.SimpleNamespace(formula_pretty="GaN", band_gap=3.4)])
     with pytest.raises(RuntimeError, match="at least 10"):
         predictor.train_from_materials_project("band_gap", api_key="key")
+
+
+def test_mp_training_asks_for_experimental_stable_materials_and_uses_ground_states(predictor, monkeypatch) -> None:
+    captured = {}
+    formulas = list(OFFLINE_BANDGAPS)
+    docs = [types.SimpleNamespace(formula_pretty=f, band_gap=g, energy_above_hull=0.0) for f, (g, _, _) in OFFLINE_BANDGAPS.items()]
+    docs.append(types.SimpleNamespace(formula_pretty="GaN", band_gap=0.1, energy_above_hull=0.04))  # unstable polymorph
+
+    class FakeMPRester:
+        def __init__(self, key):
+            self.summary = types.SimpleNamespace(search=lambda **q: captured.update(q) or docs)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    monkeypatch.setitem(sys.modules, "mp_api.client", types.SimpleNamespace(MPRester=FakeMPRester))
+    predictor.train_from_materials_project("band_gap", n_samples=len(formulas), api_key="key")
+
+    assert captured["theoretical"] is False and captured["energy_above_hull"] == (0.0, 0.05)
+    assert predictor.meta["band_gap"]["n_samples"] == len(formulas)  # one row per formula: the duplicate GaN is gone
+
+
+def test_cross_validation_is_shuffled_so_sorted_data_is_scored_fairly(predictor) -> None:
+    # Targets sorted in blocks: unshuffled 5-fold CV would test each fold on unseen chemistry.
+    formulas = sorted(OFFLINE_BANDGAPS, key=lambda f: OFFLINE_BANDGAPS[f][0])
+    X = np.array([predictor.compute_features(f) for f in formulas])
+    y = np.array([OFFLINE_BANDGAPS[f][0] for f in formulas])
+    first = predictor.train(X, y, "band_gap")
+    second = predictor.train(X, y, "band_gap")
+    assert first == second  # deterministic (fixed shuffle seed)
