@@ -29,6 +29,10 @@ class Settings(BaseSettings):
 
     # LLM + agent tuning. Model defaults to the one named in the project spec; override freely.
     anthropic_model: str = Field(default="claude-sonnet-4-6", alias="ANTHROPIC_MODEL")
+    # anthropic | gemini | auto (auto: Anthropic if its key is set, otherwise Gemini)
+    llm_provider: str = Field(default="auto", alias="LLM_PROVIDER")
+    gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
+    gemini_model: str = Field(default="gemini-3.8-flash", alias="GEMINI_MODEL")
     relevance_threshold: float = Field(default=0.65, alias="RELEVANCE_THRESHOLD")
     max_retries: int = Field(default=3, alias="MAX_RETRIES")
     min_relevant_chunks: int = Field(default=5, alias="MIN_RELEVANT_CHUNKS")

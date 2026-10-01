@@ -41,13 +41,12 @@ EXTRACTION_SYSTEM = (
     "explicitly stated in the excerpt and never guess or infer numbers."
 )
 
-EXTRACTION_PROMPT = """Paper: {title}
-DOI: {doi}
+EXTRACTION_PROMPT = """Numbered passages from papers:
 
-Excerpt:
-{text}
+{passages}
 
-Extract every material property value reported in this excerpt. For each one return:
+Extract every material property value reported in these passages. For each one return:
+- passage: the number of the passage the value comes from
 - material_name: the material as written in the text
 - material_formula: its chemical formula if given, else null
 - property_name: snake_case name, e.g. ionic_conductivity, bandgap, formation_energy,
@@ -60,7 +59,7 @@ Extract every material property value reported in this excerpt. For each one ret
   needed interpretation, "low" if uncertain
 - excerpt: the exact sentence the value came from
 
-If the excerpt reports no property values, return an empty list."""
+If the passages report no property values, return an empty list."""
 
 CRITERIA_SYSTEM = (
     "You convert a materials-research goal into precise, checkable screening criteria. "

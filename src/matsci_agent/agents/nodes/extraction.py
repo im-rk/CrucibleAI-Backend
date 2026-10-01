@@ -27,11 +27,15 @@ from matsci_agent.infrastructure.llm.anthropic_client import LLMClient, LLMError
 logger = logging.getLogger(__name__)
 
 MAX_CHUNK_CHARS = 3000
+# Passages per LLM call. One call per passage made a run use ~20 requests, a whole free-tier
+# daily Gemini quota; 4 per call cuts extraction from up to 12 calls to 3.
+BATCH_SIZE = 4
 
 
 class RawRecord(BaseModel):
     """What the LLM returns for one value; converted to a PropertyRecord afterwards."""
 
+    passage: int  # index of the passage (within the batch) the value was read from
     material_name: str
     material_formula: str | None
     property_name: str
@@ -79,6 +83,7 @@ def heuristic_extract(chunk: dict) -> list[RawRecord]:
                 match = pattern.search(sentence, pos, pos + len(alias) + _PROXIMITY)
                 if match:
                     records.append(RawRecord(
+                        passage=0,
                         material_name=formulas[0] if formulas else "Unknown",
                         material_formula=formulas[0] if formulas else None,
                         property_name=prop,
@@ -107,10 +112,12 @@ class ExtractionAgent:
         max_chunks: int = 12,
         max_formulas: int = 8,
         concurrency: int = 4,
+        batch_size: int = BATCH_SIZE,
     ) -> None:
         self.llm = llm
         self.mp_client = mp_client
         self.max_chunks = max_chunks
+        self.batch_size = batch_size
         self.max_formulas = max_formulas
         self._semaphore = asyncio.Semaphore(concurrency)
 
@@ -130,15 +137,17 @@ class ExtractionAgent:
         if not self.llm.available:
             warnings.append("LLM unavailable: property extraction used low-confidence regex heuristics.")
 
+        batches = [chunks[i : i + self.batch_size] for i in range(0, len(chunks), self.batch_size)]
         outcomes = await asyncio.gather(
-            *(self._extract_chunk(c, warnings) for c in chunks), return_exceptions=True
+            *(self._extract_batch(b, warnings) for b in batches), return_exceptions=True
         )
         records: list[PropertyRecord] = []
         skipped = 0
-        for chunk, outcome in zip(chunks, outcomes):
+        for batch, outcome in zip(batches, outcomes):
             if isinstance(outcome, BaseException):
-                skipped += 1
-                warnings.append(f"Skipped chunk {chunk['id']}: {type(outcome).__name__}: {outcome}")
+                skipped += len(batch)
+                ids = ", ".join(c["id"] for c in batch)
+                warnings.append(f"Skipped chunk {ids}: {type(outcome).__name__}: {outcome}")
             else:
                 records.extend(outcome)
         records = self._dedupe(records)
@@ -160,30 +169,32 @@ class ExtractionAgent:
             "agent_log": [{"step": "EXTRACTION", "details": details}],
         }
 
-    # ---- per-chunk extraction ---------------------------------------------------------
+    # ---- batched extraction -------------------------------------------------------------
 
-    async def _extract_chunk(self, chunk: dict, warnings: list[str]) -> list[PropertyRecord]:
-        raws = None
+    async def _extract_batch(self, batch: list[dict], warnings: list[str]) -> list[PropertyRecord]:
+        """One LLM call for several passages; each record names the passage it came from."""
         if self.llm.available:
             try:
-                meta = chunk["metadata"]
+                passages = "\n\n".join(
+                    f"[{i}] Paper: {c['metadata'].get('title', 'Unknown')} "
+                    f"(DOI: {c['metadata'].get('doi') or 'Unknown'})\n{c['text'][:MAX_CHUNK_CHARS]}"
+                    for i, c in enumerate(batch)
+                )
                 async with self._semaphore:
                     out = await self.llm.structured(
-                        prompts.EXTRACTION_PROMPT.format(
-                            title=meta.get("title", "Unknown"),
-                            doi=meta.get("doi") or "Unknown",
-                            text=chunk["text"][:MAX_CHUNK_CHARS],
-                        ),
+                        prompts.EXTRACTION_PROMPT.format(passages=passages),
                         ExtractionOutput,
                         system=prompts.EXTRACTION_SYSTEM,
-                        max_tokens=2000,
+                        max_tokens=4000,
                     )
-                raws = out.records
+                kept = [r for r in out.records if 0 <= r.passage < len(batch)]
+                if len(kept) < len(out.records):
+                    warnings.append(f"Dropped {len(out.records) - len(kept)} extracted value(s) citing a passage that does not exist.")
+                return [self._to_record(r, batch[r.passage]) for r in kept]
             except LLMError as exc:
-                warnings.append(f"Extraction fell back to heuristics for {chunk['id']}: {exc}")
-        if raws is None:
-            raws = heuristic_extract(chunk)
-        return [self._to_record(raw, chunk) for raw in raws]
+                ids = ", ".join(c["id"] for c in batch)
+                warnings.append(f"Extraction fell back to heuristics for {ids}: {exc}")
+        return [self._to_record(raw, chunk) for chunk in batch for raw in heuristic_extract(chunk)]
 
     @staticmethod
     def _to_record(raw: RawRecord, chunk: dict) -> PropertyRecord:
