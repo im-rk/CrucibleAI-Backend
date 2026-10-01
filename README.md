@@ -39,7 +39,7 @@ in `/api/health`, in every report (`mode`, `warnings`), and in the UI**:
 
 | Missing | What happens instead |
 |---|---|
-| `ANTHROPIC_API_KEY` | Query generation, relevance scoring, extraction, criteria parsing and hypotheses fall back to rules and regexes. Results are lower confidence and hypotheses are labelled as templates. |
+| An LLM key (`ANTHROPIC_API_KEY` or `GEMINI_API_KEY`) | Query generation, relevance scoring, extraction, criteria parsing and hypotheses fall back to rules and regexes. Results are lower confidence and hypotheses are labelled as templates. |
 | `MATERIALS_PROJECT_API_KEY` | A small table of well-known experimental band gaps is used, labelled *"not Materials Project"*. Unknown formulas return nothing; values are never invented. |
 | PostgreSQL | Runs still complete; they just are not saved. |
 
@@ -174,6 +174,11 @@ bundled nginx already disables response buffering for the SSE endpoint.
   1.74 eV DFT, 3.4 eV measured); each prediction's note says so. Retrain with
   `python scripts/train_krr.py --source mp --samples 1500`.
 - `claude-sonnet-4-6` is the model named in the project spec; set `ANTHROPIC_MODEL` to use another.
+- **Gemini** can replace Anthropic: set `LLM_PROVIDER=gemini` and `GEMINI_API_KEY` (model: `GEMINI_MODEL`,
+  default `gemini-3.8-flash`). Every agent works unchanged. On Google's free tier each model allows
+  about **20 requests per day** and a research run uses about 10 (extraction reads 4 passages per call),
+  so plan on 1–2 runs per model per day or enable billing. An exhausted daily quota is detected and
+  reported instead of retried.
 - The Materials Project citation DOI shown for database values is Jain et al., *APL Materials* 2013
   (`10.1063/1.4812323`).
 - Network note: HTTPS is verified against the operating system's certificate store (`USE_SYSTEM_CERTS=true`),

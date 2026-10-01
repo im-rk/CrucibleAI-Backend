@@ -53,24 +53,34 @@ def check_embedder() -> None:
         record(FAIL, "Embedding model", str(exc), True)
 
 
-async def check_anthropic() -> None:
-    if not settings.anthropic_api_key:
-        record(SKIP, "Anthropic API", "ANTHROPIC_API_KEY not set: the pipeline runs in heuristic mode")
-        return
-    try:
-        from pydantic import BaseModel
+async def check_llms() -> None:
+    """Test every configured LLM key with a real call, and say which provider the pipeline uses."""
+    from pydantic import BaseModel
 
-        from matsci_agent.infrastructure.llm.anthropic_client import LLMClient
+    from matsci_agent.api.dependencies import get_llm_client
+    from matsci_agent.infrastructure.llm.anthropic_client import LLMClient
+    from matsci_agent.infrastructure.llm.gemini_client import GeminiClient
 
-        class Ping(BaseModel):
-            ok: bool
+    class Ping(BaseModel):
+        ok: bool
 
-        result = await LLMClient(settings.anthropic_api_key, settings.anthropic_model).structured(
-            "Reply with ok=true.", Ping, max_tokens=50
-        )
-        record(OK, "Anthropic API", f"{settings.anthropic_model} responded (ok={result.ok})")
-    except Exception as exc:  # noqa: BLE001
-        record(FAIL, "Anthropic API", str(exc))
+    active = get_llm_client().model
+    clients = {
+        "Anthropic API": (settings.anthropic_api_key, LLMClient(settings.anthropic_api_key, settings.anthropic_model)),
+        "Gemini API": (settings.gemini_api_key, GeminiClient(settings.gemini_api_key, settings.gemini_model)),
+    }
+    for name, (key, client) in clients.items():
+        if not key:
+            record(SKIP, name, "key not set")
+            continue
+        tag = " [ACTIVE: used by the pipeline]" if client.model == active else ""
+        try:
+            await client.structured("Reply with ok=true.", Ping, max_tokens=50)
+            record(OK, name, f"{client.model} responded{tag}")
+        except Exception as exc:  # noqa: BLE001
+            record(FAIL, name, f"{exc}{tag}")
+    if not any(key for key, _ in clients.values()):
+        record(SKIP, "LLM", "no key set: the pipeline runs in heuristic mode")
 
 
 def check_materials_project() -> None:
@@ -117,7 +127,7 @@ def check_arxiv() -> None:
 async def main() -> int:
     check_chroma()
     check_embedder()
-    await check_anthropic()
+    await check_llms()
     check_materials_project()
     await check_database()
     check_arxiv()
