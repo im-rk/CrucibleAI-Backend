@@ -60,6 +60,7 @@ async def check_llms() -> None:
     from matsci_agent.api.dependencies import get_llm_client
     from matsci_agent.infrastructure.llm.anthropic_client import LLMClient
     from matsci_agent.infrastructure.llm.gemini_client import GeminiClient
+    from matsci_agent.infrastructure.llm.groq_client import GroqClient
 
     class Ping(BaseModel):
         ok: bool
@@ -68,6 +69,7 @@ async def check_llms() -> None:
     clients = {
         "Anthropic API": (settings.anthropic_api_key, LLMClient(settings.anthropic_api_key, settings.anthropic_model)),
         "Gemini API": (settings.gemini_api_key, GeminiClient(settings.gemini_api_key, settings.gemini_model)),
+        "Groq API": (settings.groq_api_key, GroqClient(settings.groq_api_key, settings.groq_model)),
     }
     for name, (key, client) in clients.items():
         if not key:

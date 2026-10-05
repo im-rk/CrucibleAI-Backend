@@ -174,6 +174,11 @@ bundled nginx already disables response buffering for the SSE endpoint.
   1.74 eV DFT, 3.4 eV measured); each prediction's note says so. Retrain with
   `python scripts/train_krr.py --source mp --samples 1500`.
 - `claude-sonnet-4-6` is the model named in the project spec; set `ANTHROPIC_MODEL` to use another.
+- **Groq** can replace Anthropic too: set `LLM_PROVIDER=groq` and `GROQ_API_KEY` (model: `GROQ_MODEL`, default
+  `openai/gpt-oss-120b`, which supports JSON-schema output). The free tier allows about 1,000 requests a day but
+  only about 8,000 tokens a minute, so set `LLM_CONCURRENCY=2`; a per-minute limit is retried briefly and then the
+  client pauses for three minutes (rules are used meanwhile) rather than stalling the run, and a daily limit disables
+  it with a stated reason.
 - **Gemini** can replace Anthropic: set `LLM_PROVIDER=gemini` and `GEMINI_API_KEY` (model: `GEMINI_MODEL`,
   default `gemini-3.8-flash`). Every agent works unchanged. On Google's free tier each model allows
   about **20 requests per day** and a research run uses about 10 (extraction reads 4 passages per call),
