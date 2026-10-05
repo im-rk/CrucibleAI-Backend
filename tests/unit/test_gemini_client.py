@@ -101,10 +101,10 @@ async def test_suggested_delays_are_capped(stub, monkeypatch) -> None:
     monkeypatch.setattr(gemini_client.asyncio, "sleep", fake_sleep)
     stub["replies"] = [(429, error_body(429, "quota", retry="3600s")), (200, ok_body('{"queries": []}'))]
     await client(stub).structured("x", Answer)
-    assert waits == [gemini_client.MAX_RETRY_WAIT_S]
+    assert waits == [gemini_client.MAX_RETRY_WAIT_S] and gemini_client.MAX_RETRY_WAIT_S <= gemini_client.MAX_TOTAL_WAIT_S
 
 
-async def test_persistent_rate_limiting_becomes_an_llm_error_without_disabling(stub, monkeypatch) -> None:
+async def test_persistent_rate_limiting_pauses_the_client_instead_of_retrying_every_step(stub, monkeypatch) -> None:
     async def fake_sleep(seconds):
         return None
 
@@ -113,7 +113,45 @@ async def test_persistent_rate_limiting_becomes_an_llm_error_without_disabling(s
     c = client(stub, max_retries=2)
     with pytest.raises(LLMError, match="429"):
         await c.structured("x", Answer)
-    assert len(stub["requests"]) == 3 and c.available  # quota resets; not an account problem
+    assert len(stub["requests"]) == 3
+    # not an account problem, but later steps must not each repeat the same waits
+    assert not c.available and "paused" in c.unavailable_reason
+    with pytest.raises(LLMError, match="paused"):
+        await c.structured("x", Answer)
+    assert len(stub["requests"]) == 3  # no further request while paused
+
+
+async def test_the_client_recovers_when_the_pause_ends(stub, monkeypatch) -> None:
+    async def fake_sleep(seconds):
+        return None
+
+    monkeypatch.setattr(gemini_client.asyncio, "sleep", fake_sleep)
+    stub["replies"] = [(503, error_body(503, "overloaded")), (503, error_body(503, "overloaded")),
+                       (200, ok_body('{"queries": ["back"]}'))]
+    c = client(stub, max_retries=1)
+    with pytest.raises(LLMError):
+        await c.structured("x", Answer)
+    assert not c.available
+    now = gemini_client.time.monotonic()
+    monkeypatch.setattr(gemini_client.time, "monotonic", lambda: now + gemini_client.COOLDOWN_S + 1)
+    assert c.available and c.unavailable_reason is None
+    assert await c.structured("x", Answer) == Answer(queries=["back"])
+
+
+async def test_a_long_suggested_delay_gives_up_instead_of_stalling_the_run(stub, monkeypatch) -> None:
+    waits = []
+
+    async def fake_sleep(seconds):
+        waits.append(seconds)
+
+    monkeypatch.setattr(gemini_client.asyncio, "sleep", fake_sleep)
+    stub["replies"] = [(429, error_body(429, "per minute", retry="25s"))]
+    c = client(stub)
+    with pytest.raises(LLMError):
+        await c.structured("x", Answer)
+    # a 25 s hint is capped to MAX_RETRY_WAIT_S; the next one would exceed the total budget
+    assert sum(waits) <= gemini_client.MAX_TOTAL_WAIT_S and len(stub["requests"]) <= 3
+    assert not c.available
 
 
 @pytest.mark.parametrize("status, message", [(400, "API key not valid. [API_KEY_INVALID]"), (403, "permission denied")])
@@ -156,10 +194,11 @@ def test_provider_selection(monkeypatch) -> None:
     from matsci_agent.api import dependencies as deps
     from matsci_agent.infrastructure.llm.anthropic_client import LLMClient
 
-    def pick(provider, anthropic_key, gemini_key):
+    def pick(provider, anthropic_key, gemini_key, groq_key=None):
         monkeypatch.setattr(deps.settings, "llm_provider", provider)
         monkeypatch.setattr(deps.settings, "anthropic_api_key", anthropic_key)
         monkeypatch.setattr(deps.settings, "gemini_api_key", gemini_key)
+        monkeypatch.setattr(deps.settings, "groq_api_key", groq_key)
         deps.get_llm_client.cache_clear()
         try:
             return type(deps.get_llm_client())
@@ -171,6 +210,11 @@ def test_provider_selection(monkeypatch) -> None:
     assert pick("auto", "a", "g") is LLMClient  # both set: Anthropic wins
     assert pick("auto", None, "g") is GeminiClient
     assert pick("auto", None, None) is LLMClient  # unavailable either way; Anthropic is the default
+    from matsci_agent.infrastructure.llm.groq_client import GroqClient
+
+    assert pick("groq", "a", "g", "q") is GroqClient
+    assert pick("auto", None, None, "q") is GroqClient  # only Groq is configured
+    assert pick("auto", None, "g", "q") is GeminiClient  # Gemini comes before Groq
     with pytest.raises(ValueError, match="LLM_PROVIDER"):
         pick("openai", "a", None)
 
