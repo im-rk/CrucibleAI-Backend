@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import time
 from typing import Any, TypeVar
 
 import httpx
@@ -22,7 +23,12 @@ T = TypeVar("T", bound=BaseModel)
 
 DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 RETRYABLE = {429, 500, 503}
-MAX_RETRY_WAIT_S = 30.0
+MAX_RETRY_WAIT_S = 15.0  # longest single wait between attempts
+MAX_TOTAL_WAIT_S = 20.0  # most one call may spend waiting before it gives up
+# After a call gives up on a temporary failure (overload, per-minute rate limit) the client pauses
+# so the remaining steps of the run use rules at once instead of each repeating the same waits,
+# which used to push a whole run past the pipeline timeout.
+COOLDOWN_S = 180.0
 
 
 def _retry_delay(response: httpx.Response | None, attempt: int) -> float:
@@ -72,16 +78,31 @@ class GeminiClient:
         self._url = f"{base_url.rstrip('/')}/models/{model}:generateContent"
         self._timeout = timeout_s
         self._disabled_reason: str | None = None
+        self._paused_until = 0.0
+        self._paused_reason: str | None = None
 
     @property
     def available(self) -> bool:
-        return bool(self._api_key) and self._disabled_reason is None
+        return bool(self._api_key) and self._disabled_reason is None and time.monotonic() >= self._paused_until
 
     @property
     def unavailable_reason(self) -> str | None:
         if not self._api_key:
             return "GEMINI_API_KEY is not configured"
-        return self._disabled_reason
+        if self._disabled_reason:
+            return self._disabled_reason
+        if time.monotonic() < self._paused_until:
+            return self._paused_reason
+        return None
+
+    def _pause(self, detail: str) -> LLMError:
+        """Give up for a while after a temporary failure; unlike `_disable`, this heals itself."""
+        self._paused_until = time.monotonic() + COOLDOWN_S
+        self._paused_reason = (
+            f"Gemini is overloaded or rate limited ({detail}); paused for {COOLDOWN_S:.0f}s, using rules meanwhile"
+        )
+        logger.warning(self._paused_reason)
+        return LLMError(f"Gemini API error: {detail}")
 
     def _disable(self, reason: str) -> LLMError:
         if self._disabled_reason is None:
@@ -127,14 +148,17 @@ class GeminiClient:
             ) from exc
 
     async def _post(self, body: dict) -> httpx.Response:
+        waited = 0.0
         async with httpx.AsyncClient(timeout=self._timeout) as http:
             for attempt in range(self._max_retries + 1):
                 try:
                     response = await http.post(self._url, json=body, headers={"x-goog-api-key": self._api_key})
                 except httpx.HTTPError as exc:
-                    if attempt == self._max_retries:
-                        raise LLMError(f"Gemini request failed: {exc}") from exc
-                    await asyncio.sleep(_retry_delay(None, attempt))
+                    delay = _retry_delay(None, attempt)
+                    if attempt == self._max_retries or waited + delay > MAX_TOTAL_WAIT_S:
+                        raise self._pause(f"request failed: {exc}") from exc
+                    waited += delay
+                    await asyncio.sleep(delay)
                     continue
 
                 if response.status_code == 200:
@@ -150,11 +174,14 @@ class GeminiClient:
                         f"the Gemini {daily} for {self.model} is used up; it resets daily "
                         "(or enable billing in Google AI Studio for higher limits)"
                     )
-                if response.status_code in RETRYABLE and attempt < self._max_retries:
+                if response.status_code in RETRYABLE:
                     delay = _retry_delay(response, attempt)
-                    logger.warning(f"Gemini {response.status_code}; retrying in {delay:.0f}s ({message[:80]})")
-                    await asyncio.sleep(delay)
-                    continue
+                    if attempt < self._max_retries and waited + delay <= MAX_TOTAL_WAIT_S:
+                        logger.warning(f"Gemini {response.status_code}; retrying in {delay:.0f}s ({message[:80]})")
+                        waited += delay
+                        await asyncio.sleep(delay)
+                        continue
+                    raise self._pause(f"{response.status_code}: {message[:100]}")
                 raise LLMError(f"Gemini API error {response.status_code}: {message}")
         raise LLMError("Gemini request failed")  # unreachable: the loop always returns or raises
 
