@@ -20,6 +20,7 @@ from matsci_agent.infrastructure.clients.mp_api import MaterialsProjectClient
 from matsci_agent.infrastructure.db.session import create_session_factory
 from matsci_agent.infrastructure.llm.anthropic_client import LLMClient
 from matsci_agent.infrastructure.llm.gemini_client import GeminiClient
+from matsci_agent.infrastructure.llm.groq_client import GroqClient
 from matsci_agent.infrastructure.ml.krr import KRRPropertyPredictor
 from matsci_agent.infrastructure.retrieval.bm25_index import BM25Index
 from matsci_agent.infrastructure.retrieval.hybrid_search import HybridSearch
@@ -61,14 +62,21 @@ def get_paper_catalog() -> PaperCatalog:
 
 
 @lru_cache(maxsize=1)
-def get_llm_client() -> LLMClient | GeminiClient:
+def get_llm_client() -> LLMClient | GeminiClient | GroqClient:
     provider = settings.llm_provider.lower()
     if provider == "auto":
-        provider = "gemini" if settings.gemini_api_key and not settings.anthropic_api_key else "anthropic"
+        provider = (
+            "anthropic" if settings.anthropic_api_key
+            else "gemini" if settings.gemini_api_key
+            else "groq" if settings.groq_api_key
+            else "anthropic"
+        )
     if provider == "gemini":
         return GeminiClient(settings.gemini_api_key, settings.gemini_model)
+    if provider == "groq":
+        return GroqClient(settings.groq_api_key, settings.groq_model)
     if provider != "anthropic":
-        raise ValueError(f"LLM_PROVIDER must be 'anthropic', 'gemini' or 'auto', not '{settings.llm_provider}'")
+        raise ValueError(f"LLM_PROVIDER must be 'anthropic', 'gemini', 'groq' or 'auto', not '{settings.llm_provider}'")
     return LLMClient(settings.anthropic_api_key, settings.anthropic_model)
 
 
