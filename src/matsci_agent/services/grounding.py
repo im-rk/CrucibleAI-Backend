@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from matsci_agent.infrastructure.llm.anthropic_client import LLMClient, LLMError
+from matsci_agent.security.guardrails import UNTRUSTED_NOTICE, wrap_untrusted
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ _FIGURE = re.compile(
 
 GROUNDING_SYSTEM = (
     "You are a strict fact-checker for materials science claims. A claim is supported only if the "
-    "cited evidence itself states or directly implies it."
+    "cited evidence itself states or directly implies it." + UNTRUSTED_NOTICE
 )
 GROUNDING_PROMPT = """For each numbered hypothesis, decide whether the cited evidence supports its factual claims.
 - supported: the evidence states or directly implies the claims
@@ -68,7 +69,7 @@ class GroundingChecker:
             try:
                 items = "\n\n".join(
                     f"[{i}] Hypothesis: {h['statement']}\nCited evidence:\n"
-                    + ("\n".join(f"- {e['snippet']}" for e in h.get("evidence", [])) or "- (none)")
+                    + ("\n".join(f"- {wrap_untrusted(e['snippet'])}" for e in h.get("evidence", [])) or "- (none)")
                     for i, h in enumerate(hypotheses)
                 )
                 out = await self.llm.structured(

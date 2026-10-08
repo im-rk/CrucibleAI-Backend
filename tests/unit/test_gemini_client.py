@@ -201,7 +201,7 @@ def test_provider_selection(monkeypatch) -> None:
         monkeypatch.setattr(deps.settings, "groq_api_key", groq_key)
         deps.get_llm_client.cache_clear()
         try:
-            return type(deps.get_llm_client())
+            return type(deps.build_provider_client())
         finally:
             deps.get_llm_client.cache_clear()
 

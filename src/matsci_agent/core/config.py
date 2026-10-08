@@ -40,6 +40,14 @@ class Settings(BaseSettings):
     min_relevant_chunks: int = Field(default=5, alias="MIN_RELEVANT_CHUNKS")
     live_arxiv_fallback: bool = Field(default=True, alias="LIVE_ARXIV_FALLBACK")
     llm_concurrency: int = Field(default=4, alias="LLM_CONCURRENCY")
+    # Response cache for LLM calls: on | off | refresh (ignore stored answers, store fresh ones)
+    llm_cache: str = Field(default="on", alias="LLM_CACHE")
+    llm_cache_path: str = Field(default=".cache/llm_cache.sqlite", alias="LLM_CACHE_PATH")
+    llm_cache_ttl_s: float = Field(default=7 * 24 * 3600, alias="LLM_CACHE_TTL_S")
+    # Provider token-per-minute cap to schedule around (0 = no limiter); e.g. 8000 for Groq's free tier
+    llm_tokens_per_minute: int = Field(default=0, alias="LLM_TOKENS_PER_MINUTE")
+    # Most real (non-cached) LLM calls one research run may make
+    llm_max_calls_per_run: int = Field(default=60, alias="LLM_MAX_CALLS_PER_RUN")
 
     # API runtime
     cors_origins: str = Field(default="http://localhost:3000,http://localhost:5173", alias="CORS_ORIGINS")

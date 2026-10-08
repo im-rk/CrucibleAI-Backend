@@ -31,6 +31,8 @@ class ResearchRequest(BaseModel):
     """User input contract for starting a research run."""
     query: str = Field(min_length=3, max_length=1000)
     max_results: int = Field(default=10, ge=1, le=30)
+    # A plan the user previewed and edited (criteria / queries); overrides the planner's output.
+    plan: Optional[dict] = None
 
 
 class MaterialProperty(BaseModel):

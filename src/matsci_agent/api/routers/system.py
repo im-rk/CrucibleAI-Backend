@@ -5,10 +5,12 @@ from __future__ import annotations
 import asyncio
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import PlainTextResponse
 
 from matsci_agent import __version__
 from matsci_agent.api.dependencies import get_paper_catalog, get_persistence, runtime_mode
 from matsci_agent.core.config import settings
+from matsci_agent.observability.metrics import METRICS
 from matsci_agent.services.papers_srv import ListingUnsupported, PaperCatalog
 from matsci_agent.services.persistence import PersistenceService
 
@@ -35,6 +37,12 @@ async def health_check(
         "llm": mode["llm"] or f"unavailable, heuristic mode ({mode['llm_unavailable_reason']})",
         "database": await store.ping(),
     }
+
+
+@router.get("/metrics", response_class=PlainTextResponse)
+async def metrics() -> str:
+    """Prometheus text format: runs, LLM calls, tokens and latency since the process started."""
+    return METRICS.render()
 
 
 def _sample(catalog: PaperCatalog) -> list[dict]:

@@ -1,0 +1,905 @@
+{
+ "description": "Passages with hand-labelled property values (canonical units).",
+ "items": [
+  {
+   "id": "g01",
+   "text": "The garnet Li7La3Zr2O12 reaches an ionic conductivity of 1.2 mS/cm at room temperature.",
+   "records": [
+    {
+     "formula": "Li7La3Zr2O12",
+     "property": "ionic_conductivity",
+     "value": 0.0012,
+     "as_written": {
+      "value": "1.2",
+      "unit": "mS/cm"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g02",
+   "text": "Li10GeP2S12 exhibits an ionic conductivity of 12 mS/cm, comparable to liquid electrolytes.",
+   "records": [
+    {
+     "formula": "Li10GeP2S12",
+     "property": "ionic_conductivity",
+     "value": 0.012,
+     "as_written": {
+      "value": "12",
+      "unit": "mS/cm"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g03",
+   "text": "The Li6PS5Cl argyrodite showed a room-temperature conductivity of 3.2 × 10⁻³ S/cm after annealing.",
+   "records": [
+    {
+     "formula": "Li6PS5Cl",
+     "property": "ionic_conductivity",
+     "value": 0.0032,
+     "as_written": {
+      "value": "3.2 × 10⁻³",
+      "unit": "S/cm"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g04",
+   "text": "Na3Zr2Si2PO12 (NASICON) exhibits a bulk ionic conductivity of 6.7 × 10^-4 S/cm.",
+   "records": [
+    {
+     "formula": "Na3Zr2Si2PO12",
+     "property": "ionic_conductivity",
+     "value": 0.00067,
+     "as_written": {
+      "value": "6.7 × 10^-4",
+      "unit": "S/cm"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g05",
+   "text": "Li1.3Al0.3Ti1.7(PO4)3 has an ionic conductivity of 1.0 × 10⁻⁴ S cm⁻¹ at 25 C.",
+   "records": [
+    {
+     "formula": "Li1.3Al0.3Ti1.7(PO4)3",
+     "property": "ionic_conductivity",
+     "value": 0.0001,
+     "as_written": {
+      "value": "1.0 × 10⁻⁴",
+      "unit": "S cm⁻¹"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g06",
+   "text": "The conductivity of Li3YCl6 is 0.03 mS/cm at 25 C.",
+   "records": [
+    {
+     "formula": "Li3YCl6",
+     "property": "ionic_conductivity",
+     "value": 3e-05,
+     "as_written": {
+      "value": "0.03",
+      "unit": "mS/cm"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g07",
+   "text": "Li7P3S11 glass-ceramic reaches 17 mS/cm at room temperature.",
+   "records": [
+    {
+     "formula": "Li7P3S11",
+     "property": "ionic_conductivity",
+     "value": 0.017,
+     "as_written": {
+      "value": "17",
+      "unit": "mS/cm"
+     }
+    }
+   ],
+   "note": "no property keyword: the unit implies it"
+  },
+  {
+   "id": "g08",
+   "text": "Garnet Li6.4La3Zr1.4Ta0.6O12 has an ionic conductivity of 1.0 mS/cm and an activation energy of 0.35 eV.",
+   "records": [
+    {
+     "formula": "Li6.4La3Zr1.4Ta0.6O12",
+     "property": "ionic_conductivity",
+     "value": 0.001,
+     "as_written": {
+      "value": "1.0",
+      "unit": "mS/cm"
+     }
+    },
+    {
+     "formula": "Li6.4La3Zr1.4Ta0.6O12",
+     "property": "activation_energy",
+     "value": 0.35,
+     "as_written": {
+      "value": "0.35",
+      "unit": "eV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g09",
+   "text": "GaN has a direct band gap of 3.4 eV at room temperature.",
+   "records": [
+    {
+     "formula": "GaN",
+     "property": "bandgap",
+     "value": 3.4,
+     "as_written": {
+      "value": "3.4",
+      "unit": "eV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g10",
+   "text": "AlN is an ultrawide-gap semiconductor with a band gap of 6.2 eV.",
+   "records": [
+    {
+     "formula": "AlN",
+     "property": "bandgap",
+     "value": 6.2,
+     "as_written": {
+      "value": "6.2",
+      "unit": "eV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g11",
+   "text": "The optical band gap of Ga2O3 is 4.8 eV.",
+   "records": [
+    {
+     "formula": "Ga2O3",
+     "property": "bandgap",
+     "value": 4.8,
+     "as_written": {
+      "value": "4.8",
+      "unit": "eV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g12",
+   "text": "CsPbI3 has a bandgap of 1.73 eV in the cubic phase, while CsPbBr3 shows 2.3 eV.",
+   "records": [
+    {
+     "formula": "CsPbI3",
+     "property": "bandgap",
+     "value": 1.73,
+     "as_written": {
+      "value": "1.73",
+      "unit": "eV"
+     }
+    },
+    {
+     "formula": "CsPbBr3",
+     "property": "bandgap",
+     "value": 2.3,
+     "as_written": {
+      "value": "2.3",
+      "unit": "eV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g13",
+   "text": "We measured a band gap of 3200 meV for ZnO nanowires.",
+   "records": [
+    {
+     "formula": "ZnO",
+     "property": "bandgap",
+     "value": 3.2,
+     "as_written": {
+      "value": "3200",
+      "unit": "meV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g14",
+   "text": "MAPbI3 films display a band gap of 1.55 eV and a power conversion efficiency of 22.1%.",
+   "records": [
+    {
+     "formula": "MAPbI3",
+     "property": "bandgap",
+     "value": 1.55,
+     "as_written": {
+      "value": "1.55",
+      "unit": "eV"
+     }
+    },
+    {
+     "formula": "MAPbI3",
+     "property": "power_conversion_efficiency",
+     "value": 22.1,
+     "as_written": {
+      "value": "22.1",
+      "unit": "%"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g15",
+   "text": "In contrast to Si (band gap 1.12 eV), GaAs has a band gap of 1.42 eV.",
+   "records": [
+    {
+     "formula": "Si",
+     "property": "bandgap",
+     "value": 1.12,
+     "as_written": {
+      "value": "1.12",
+      "unit": "eV"
+     }
+    },
+    {
+     "formula": "GaAs",
+     "property": "bandgap",
+     "value": 1.42,
+     "as_written": {
+      "value": "1.42",
+      "unit": "eV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g16",
+   "text": "Our DFT calculations predict a band gap of 2.0 eV for MoS2 monolayers.",
+   "records": [
+    {
+     "formula": "MoS2",
+     "property": "bandgap",
+     "value": 2.0,
+     "as_written": {
+      "value": "2.0",
+      "unit": "eV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g17",
+   "text": "BaTiO3 shows a band gap of 3.2 eV and SrTiO3 a band gap of 3.25 eV.",
+   "records": [
+    {
+     "formula": "BaTiO3",
+     "property": "bandgap",
+     "value": 3.2,
+     "as_written": {
+      "value": "3.2",
+      "unit": "eV"
+     }
+    },
+    {
+     "formula": "SrTiO3",
+     "property": "bandgap",
+     "value": 3.25,
+     "as_written": {
+      "value": "3.25",
+      "unit": "eV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g18",
+   "text": "SnO2 is transparent with a band gap of 3.6 eV, whereas Cu2O has a band gap of 2.1 eV.",
+   "records": [
+    {
+     "formula": "SnO2",
+     "property": "bandgap",
+     "value": 3.6,
+     "as_written": {
+      "value": "3.6",
+      "unit": "eV"
+     }
+    },
+    {
+     "formula": "Cu2O",
+     "property": "bandgap",
+     "value": 2.1,
+     "as_written": {
+      "value": "2.1",
+      "unit": "eV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g19",
+   "text": "ZnO has a band gap of 3.37 eV and a bulk modulus of 142 GPa.",
+   "records": [
+    {
+     "formula": "ZnO",
+     "property": "bandgap",
+     "value": 3.37,
+     "as_written": {
+      "value": "3.37",
+      "unit": "eV"
+     }
+    },
+    {
+     "formula": "ZnO",
+     "property": "bulk_modulus",
+     "value": 142.0,
+     "as_written": {
+      "value": "142",
+      "unit": "GPa"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g20",
+   "text": "The formation energy of Li3PS4 is -0.88 eV/atom, indicating a stable compound.",
+   "records": [
+    {
+     "formula": "Li3PS4",
+     "property": "formation_energy",
+     "value": -0.88,
+     "as_written": {
+      "value": "-0.88",
+      "unit": "eV/atom"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g21",
+   "text": "An energy above hull of 25 meV/atom was computed for Li2MnO3.",
+   "records": [
+    {
+     "formula": "Li2MnO3",
+     "property": "energy_above_hull",
+     "value": 0.025,
+     "as_written": {
+      "value": "25",
+      "unit": "meV/atom"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g22",
+   "text": "DFT yields a density of 5.1 g/cm3 for Li7La3Zr2O12.",
+   "records": [
+    {
+     "formula": "Li7La3Zr2O12",
+     "property": "density",
+     "value": 5.1,
+     "as_written": {
+      "value": "5.1",
+      "unit": "g/cm3"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g23",
+   "text": "Anatase TiO2 has a density of 3900 kg/m3.",
+   "records": [
+    {
+     "formula": "TiO2",
+     "property": "density",
+     "value": 3.9,
+     "as_written": {
+      "value": "3900",
+      "unit": "kg/m3"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g24",
+   "text": "The activation energy for Li-ion migration in Li10GeP2S12 is 0.25 eV.",
+   "records": [
+    {
+     "formula": "Li10GeP2S12",
+     "property": "activation_energy",
+     "value": 0.25,
+     "as_written": {
+      "value": "0.25",
+      "unit": "eV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g25",
+   "text": "An activation energy of 300 meV was extracted for Li3N.",
+   "records": [
+    {
+     "formula": "Li3N",
+     "property": "activation_energy",
+     "value": 0.3,
+     "as_written": {
+      "value": "300",
+      "unit": "meV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g26",
+   "text": "The bulk modulus of Si is 98 GPa.",
+   "records": [
+    {
+     "formula": "Si",
+     "property": "bulk_modulus",
+     "value": 98.0,
+     "as_written": {
+      "value": "98",
+      "unit": "GPa"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g27",
+   "text": "The shear modulus of Cu is 48 GPa.",
+   "records": [
+    {
+     "formula": "Cu",
+     "property": "shear_modulus",
+     "value": 48.0,
+     "as_written": {
+      "value": "48",
+      "unit": "GPa"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g28",
+   "text": "YBa2Cu3O7 becomes superconducting below a critical temperature of 92 K.",
+   "records": [
+    {
+     "formula": "YBa2Cu3O7",
+     "property": "critical_temperature",
+     "value": 92.0,
+     "as_written": {
+      "value": "92",
+      "unit": "K"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g29",
+   "text": "MgB2 has a superconducting transition temperature of 39 K.",
+   "records": [
+    {
+     "formula": "MgB2",
+     "property": "critical_temperature",
+     "value": 39.0,
+     "as_written": {
+      "value": "39",
+      "unit": "K"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g30",
+   "text": "A specific capacity of 180 mAh/g was delivered by LiFePO4 at 0.1C.",
+   "records": [
+    {
+     "formula": "LiFePO4",
+     "property": "capacity",
+     "value": 180.0,
+     "as_written": {
+      "value": "180",
+      "unit": "mAh/g"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g31",
+   "text": "LiNi0.8Co0.1Mn0.1O2 delivers a discharge capacity of 200 mAh g⁻¹.",
+   "records": [
+    {
+     "formula": "LiNi0.8Co0.1Mn0.1O2",
+     "property": "capacity",
+     "value": 200.0,
+     "as_written": {
+      "value": "200",
+      "unit": "mAh g⁻¹"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g32",
+   "text": "The solar cell based on FAPbI3 reaches a power conversion efficiency of 25.2%.",
+   "records": [
+    {
+     "formula": "FAPbI3",
+     "property": "power_conversion_efficiency",
+     "value": 25.2,
+     "as_written": {
+      "value": "25.2",
+      "unit": "%"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g33",
+   "text": "The electrochemical stability window of Li6PS5Cl extends up to 5.0 V.",
+   "records": [
+    {
+     "formula": "Li6PS5Cl",
+     "property": "electrochemical_stability_window",
+     "value": 5.0,
+     "as_written": {
+      "value": "5.0",
+      "unit": "V"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g34",
+   "text": "Cathodes of LiCoO2 show an electrochemical window of 4.2 V.",
+   "records": [
+    {
+     "formula": "LiCoO2",
+     "property": "electrochemical_stability_window",
+     "value": 4.2,
+     "as_written": {
+      "value": "4.2",
+      "unit": "V"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g35",
+   "text": "Li7La3Zr2O12 shows an ionic conductivity of 0.8 mS/cm. Its density is 5.1 g/cm3 and its activation energy is 0.32 eV.",
+   "records": [
+    {
+     "formula": "Li7La3Zr2O12",
+     "property": "ionic_conductivity",
+     "value": 0.0008,
+     "as_written": {
+      "value": "0.8",
+      "unit": "mS/cm"
+     }
+    },
+    {
+     "formula": "Li7La3Zr2O12",
+     "property": "density",
+     "value": 5.1,
+     "as_written": {
+      "value": "5.1",
+      "unit": "g/cm3"
+     }
+    },
+    {
+     "formula": "Li7La3Zr2O12",
+     "property": "activation_energy",
+     "value": 0.32,
+     "as_written": {
+      "value": "0.32",
+      "unit": "eV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g36",
+   "text": "GaN, AlN and InN have band gaps of 3.4, 6.2 and 0.7 eV, respectively.",
+   "records": [
+    {
+     "formula": "GaN",
+     "property": "bandgap",
+     "value": 3.4,
+     "as_written": {
+      "value": "3.4",
+      "unit": "eV"
+     }
+    },
+    {
+     "formula": "AlN",
+     "property": "bandgap",
+     "value": 6.2,
+     "as_written": {
+      "value": "6.2",
+      "unit": "eV"
+     }
+    },
+    {
+     "formula": "InN",
+     "property": "bandgap",
+     "value": 0.7,
+     "as_written": {
+      "value": "0.7",
+      "unit": "eV"
+     }
+    }
+   ],
+   "note": "list with 'respectively'"
+  },
+  {
+   "id": "g37",
+   "text": "Sulfide electrolytes such as Li3PS4 and Li7P3S11 show ionic conductivities of 0.2 and 17 mS/cm, respectively.",
+   "records": [
+    {
+     "formula": "Li3PS4",
+     "property": "ionic_conductivity",
+     "value": 0.0002,
+     "as_written": {
+      "value": "0.2",
+      "unit": "mS/cm"
+     }
+    },
+    {
+     "formula": "Li7P3S11",
+     "property": "ionic_conductivity",
+     "value": 0.017,
+     "as_written": {
+      "value": "17",
+      "unit": "mS/cm"
+     }
+    }
+   ],
+   "note": "list with 'respectively'"
+  },
+  {
+   "id": "g38",
+   "text": "The LLZO pellet reached an ionic conductivity of 0.9 mS/cm after Ta doping.",
+   "records": [
+    {
+     "formula": "LLZO",
+     "property": "ionic_conductivity",
+     "value": 0.0009,
+     "as_written": {
+      "value": "0.9",
+      "unit": "mS/cm"
+     }
+    }
+   ],
+   "note": "material given only as an abbreviation"
+  },
+  {
+   "id": "g39",
+   "text": "A conductivity of 0.5 S/m was measured for Li3N at room temperature.",
+   "records": [
+    {
+     "formula": "Li3N",
+     "property": "ionic_conductivity",
+     "value": 0.005,
+     "as_written": {
+      "value": "0.5",
+      "unit": "S/m"
+     }
+    }
+   ],
+   "note": "unit conversion from S/m"
+  },
+  {
+   "id": "g40",
+   "text": "Previous reports gave 0.5 mS/cm for Li3PS4, whereas our optimised sample reaches 1.6 mS/cm.",
+   "records": [
+    {
+     "formula": "Li3PS4",
+     "property": "ionic_conductivity",
+     "value": 0.0016,
+     "as_written": {
+      "value": "1.6",
+      "unit": "mS/cm"
+     }
+    }
+   ],
+   "note": "only this work's value counts, not the cited prior value"
+  },
+  {
+   "id": "g41",
+   "text": "Although CdTe has a band gap of 1.5 eV, no measurable conductivity was observed for it.",
+   "records": [
+    {
+     "formula": "CdTe",
+     "property": "bandgap",
+     "value": 1.5,
+     "as_written": {
+      "value": "1.5",
+      "unit": "eV"
+     }
+    }
+   ],
+   "note": "a negated property must not produce a value"
+  },
+  {
+   "id": "g42",
+   "text": "The band gap of 2.3 eV reported for CsPbBr3 increases to 2.5 eV upon Cl substitution in CsPbBr2Cl.",
+   "records": [
+    {
+     "formula": "CsPbBr3",
+     "property": "bandgap",
+     "value": 2.3,
+     "as_written": {
+      "value": "2.3",
+      "unit": "eV"
+     }
+    },
+    {
+     "formula": "CsPbBr2Cl",
+     "property": "bandgap",
+     "value": 2.5,
+     "as_written": {
+      "value": "2.5",
+      "unit": "eV"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g43",
+   "text": "Table 1. SnO2: Eg = 3.6 eV; ZnO: Eg = 3.37 eV; TiO2: Eg = 3.2 eV.",
+   "records": [
+    {
+     "formula": "SnO2",
+     "property": "bandgap",
+     "value": 3.6,
+     "as_written": {
+      "value": "3.6",
+      "unit": "eV"
+     }
+    },
+    {
+     "formula": "ZnO",
+     "property": "bandgap",
+     "value": 3.37,
+     "as_written": {
+      "value": "3.37",
+      "unit": "eV"
+     }
+    },
+    {
+     "formula": "TiO2",
+     "property": "bandgap",
+     "value": 3.2,
+     "as_written": {
+      "value": "3.2",
+      "unit": "eV"
+     }
+    }
+   ],
+   "note": "property written as the symbol Eg, table style"
+  },
+  {
+   "id": "g44",
+   "text": "NMC811 delivers 200 mAh/g at C/10, and LiFePO4 delivers 160 mAh/g.",
+   "records": [
+    {
+     "formula": "NMC811",
+     "property": "capacity",
+     "value": 200.0,
+     "as_written": {
+      "value": "200",
+      "unit": "mAh/g"
+     }
+    },
+    {
+     "formula": "LiFePO4",
+     "property": "capacity",
+     "value": 160.0,
+     "as_written": {
+      "value": "160",
+      "unit": "mAh/g"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g45",
+   "text": "The ionic conductivity of Li6PS5Br is 2.4 × 10^-3 S/cm and that of Li6PS5I only 1.0 × 10^-6 S/cm.",
+   "records": [
+    {
+     "formula": "Li6PS5Br",
+     "property": "ionic_conductivity",
+     "value": 0.0024,
+     "as_written": {
+      "value": "2.4 × 10^-3",
+      "unit": "S/cm"
+     }
+    },
+    {
+     "formula": "Li6PS5I",
+     "property": "ionic_conductivity",
+     "value": 1e-06,
+     "as_written": {
+      "value": "1.0 × 10^-6",
+      "unit": "S/cm"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g46",
+   "text": "A Tc of 133 K was reported for HgBa2Ca2Cu3O8 at ambient pressure.",
+   "records": [
+    {
+     "formula": "HgBa2Ca2Cu3O8",
+     "property": "critical_temperature",
+     "value": 133.0,
+     "as_written": {
+      "value": "133",
+      "unit": "K"
+     }
+    }
+   ],
+   "note": "property written as the symbol Tc"
+  },
+  {
+   "id": "g47",
+   "text": "We estimate an energy above hull of 0.02 eV/atom for NaMnO2, within the stability threshold.",
+   "records": [
+    {
+     "formula": "NaMnO2",
+     "property": "energy_above_hull",
+     "value": 0.02,
+     "as_written": {
+      "value": "0.02",
+      "unit": "eV/atom"
+     }
+    }
+   ]
+  },
+  {
+   "id": "g48",
+   "text": "The thermal conductivity of AlN is 285 W/mK, far above that of oxide ceramics.",
+   "records": [],
+   "note": "thermal conductivity is not ionic conductivity"
+  },
+  {
+   "id": "g49",
+   "text": "The cell sustained a current density of 10 mA/cm2 for 500 cycles.",
+   "records": [],
+   "note": "current density is not material density"
+  },
+  {
+   "id": "g50",
+   "text": "We discuss the synthesis route and the sintering temperature of the pellets in Section 2.",
+   "records": []
+  },
+  {
+   "id": "g51",
+   "text": "Experiments were performed in an argon-filled glovebox with oxygen below 0.1 ppm.",
+   "records": []
+  },
+  {
+   "id": "g52",
+   "text": "This review summarises progress in solid-state batteries and highlights open challenges.",
+   "records": []
+  },
+  {
+   "id": "g53",
+   "text": "The pellets were pressed at 300 MPa and sintered at 1200 C for 6 hours.",
+   "records": [],
+   "note": "process parameters, not material properties"
+  }
+ ]
+}

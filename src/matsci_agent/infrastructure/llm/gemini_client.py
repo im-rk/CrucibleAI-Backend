@@ -16,6 +16,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from matsci_agent.infrastructure.llm.anthropic_client import LLMError
+from matsci_agent.observability.trace import report_usage
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +135,11 @@ class GeminiClient:
 
         response = await self._post(body)
         data = response.json()
+        meta = data.get("usageMetadata") or {}
+        report_usage(
+            meta.get("promptTokenCount"),
+            (meta.get("candidatesTokenCount") or 0) + (meta.get("thoughtsTokenCount") or 0),
+        )
         candidates = data.get("candidates") or []
         if not candidates:
             reason = (data.get("promptFeedback") or {}).get("blockReason", "no candidates")

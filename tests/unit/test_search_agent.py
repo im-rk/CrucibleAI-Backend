@@ -139,7 +139,7 @@ async def test_one_failed_batch_falls_back_only_for_that_batch() -> None:
         async def structured(self, prompt, schema, **kwargs):
             if schema is SearchQueries:
                 return SearchQueries(queries=["q"])
-            if "[0] first-batch" in prompt:
+            if "first-batch text" in prompt:
                 return scores(*([0.9] * 8))
             raise LLMError("second batch down")
 

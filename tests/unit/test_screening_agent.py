@@ -224,3 +224,17 @@ async def test_unattributed_values_are_counted_not_silently_dropped() -> None:
     out = await ScreeningAgent(FakeLLM(), FakeKRR(), FakeMP()).run(run_state("bandgap above 3 eV", records))
     assert any("could not be attributed" in w for w in out["warnings"])
     assert [c["formula"] for c in out["screened_candidates"]] == ["GaN"]
+
+
+async def test_class_level_names_are_not_screened_as_candidates() -> None:
+    """'Lithium thiophosphates' is a family, not a material: it must neither qualify nor appear as a candidate."""
+    records = [
+        rec("Li10GeP2S12", "ionic_conductivity", 1.2e-2, "S/cm", source="a"),
+        {**rec("Li3PS4", "ionic_conductivity", 5e-3, "S/cm", source="b"), "material_formula": None, "material_name": "Lithium thiophosphates (LPS)"},
+        {**rec("Li3PS4", "ionic_conductivity", 5e-3, "S/cm", source="c"), "material_formula": None, "material_name": "LLZO"},  # a named abbreviation is fine
+    ]
+    out = await ScreeningAgent(FakeLLM(), FakeKRR(), FakeMP()).run(run_state("ionic conductivity above 1e-3 S/cm", records))
+
+    names = {c["formula"] or c["name"] for c in out["screened_candidates"]}
+    assert names == {"Li10GeP2S12", "LLZO"}
+    assert any("class of materials" in w for w in out["warnings"])

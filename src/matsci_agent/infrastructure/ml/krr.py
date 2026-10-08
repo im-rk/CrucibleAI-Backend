@@ -74,10 +74,12 @@ class KRRPropertyPredictor:
                 from matminer.featurizers.composition import ElementProperty
                 from pymatgen.core import Composition
 
+                from matsci_agent.domain.chemistry import expand_abbreviations
+
                 if self._featurizer is None:
                     self._featurizer = ElementProperty.from_preset("magpie")
                     self._featurizer.set_n_jobs(1)
-                return np.array(self._featurizer.featurize(Composition(formula)), dtype=np.float64)
+                return np.array(self._featurizer.featurize(Composition(expand_abbreviations(formula))), dtype=np.float64)
             except ImportError:
                 self._featurizer_failed = True  # don't retry the import per formula
             except Exception:

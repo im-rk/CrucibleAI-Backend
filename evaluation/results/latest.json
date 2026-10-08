@@ -1,0 +1,335 @@
+{
+ "generated_at": "2026-10-08T02:47:57+00:00",
+ "python": "3.12.7",
+ "llm": "openai/gpt-oss-120b",
+ "retrieval": {
+  "corpus_papers": 1234,
+  "tasks": {
+   "sentence_to_paper": 150,
+   "topic_to_papers": 22,
+   "paraphrase_to_paper": 60
+  },
+  "sentence_to_paper": {
+   "bm25": {
+    "recall1": 1.0,
+    "recall5": 1.0,
+    "recall10": 1.0,
+    "mrr": 1.0,
+    "queries": 150,
+    "ms_per_query": 12.9
+   },
+   "dense": {
+    "recall1": 0.7267,
+    "recall5": 0.8933,
+    "recall10": 0.92,
+    "mrr": 0.7938,
+    "queries": 150,
+    "ms_per_query": 17.4
+   },
+   "hybrid_rrf": {
+    "recall1": 0.8267,
+    "recall5": 0.94,
+    "recall10": 0.9867,
+    "mrr": 0.8882,
+    "queries": 150,
+    "ms_per_query": 45.9
+   },
+   "hybrid_rrf_rerank": {
+    "recall1": 0.98,
+    "recall5": 0.9933,
+    "recall10": 1.0,
+    "mrr": 0.9853,
+    "queries": 150,
+    "ms_per_query": 2602.9
+   }
+  },
+  "topic_to_papers": {
+   "bm25": {
+    "p10": 1.0,
+    "ndcg10": 1.0,
+    "queries": 22,
+    "ms_per_query": 3.4
+   },
+   "dense": {
+    "p10": 0.9091,
+    "ndcg10": 0.9186,
+    "queries": 22,
+    "ms_per_query": 25.3
+   },
+   "hybrid_rrf": {
+    "p10": 0.9727,
+    "ndcg10": 0.9799,
+    "queries": 22,
+    "ms_per_query": 49.5
+   },
+   "hybrid_rrf_rerank": {
+    "p10": 0.9773,
+    "ndcg10": 0.9837,
+    "queries": 22,
+    "ms_per_query": 2697.1
+   }
+  },
+  "paraphrase_to_paper": {
+   "bm25": {
+    "recall1": 0.9333,
+    "recall5": 0.9667,
+    "recall10": 0.9833,
+    "mrr": 0.9526,
+    "queries": 60,
+    "ms_per_query": 22.6
+   },
+   "dense": {
+    "recall1": 0.6667,
+    "recall5": 0.8,
+    "recall10": 0.8667,
+    "mrr": 0.7321,
+    "queries": 60,
+    "ms_per_query": 34.4
+   },
+   "hybrid_rrf": {
+    "recall1": 0.8333,
+    "recall5": 0.9167,
+    "recall10": 0.9833,
+    "mrr": 0.8724,
+    "queries": 60,
+    "ms_per_query": 79.3
+   },
+   "hybrid_rrf_rerank": {
+    "recall1": 0.8667,
+    "recall5": 0.9667,
+    "recall10": 0.9833,
+    "mrr": 0.9072,
+    "queries": 60,
+    "ms_per_query": 3108.3
+   }
+  }
+ },
+ "extraction": {
+  "passages": 53,
+  "gold_records": 64,
+  "rule_based": {
+   "overall": {
+    "precision": 0.902,
+    "recall": 0.578,
+    "f1": 0.705,
+    "tp": 37,
+    "fp": 4,
+    "fn": 27
+   },
+   "value_accuracy": 0.925,
+   "negative_items": 6,
+   "negative_items_with_false_alarms": 0,
+   "per_property": {
+    "activation_energy": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 4,
+     "fp": 0,
+     "fn": 0
+    },
+    "bandgap": {
+     "precision": 0.857,
+     "recall": 0.5,
+     "f1": 0.632,
+     "tp": 12,
+     "fp": 2,
+     "fn": 12
+    },
+    "bulk_modulus": {
+     "precision": 0.0,
+     "recall": 0.0,
+     "f1": 0.0,
+     "tp": 0,
+     "fp": 0,
+     "fn": 2
+    },
+    "capacity": {
+     "precision": 1.0,
+     "recall": 0.5,
+     "f1": 0.667,
+     "tp": 2,
+     "fp": 0,
+     "fn": 2
+    },
+    "critical_temperature": {
+     "precision": 1.0,
+     "recall": 0.667,
+     "f1": 0.8,
+     "tp": 2,
+     "fp": 0,
+     "fn": 1
+    },
+    "density": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 3,
+     "fp": 0,
+     "fn": 0
+    },
+    "electrochemical_stability_window": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 2,
+     "fp": 0,
+     "fn": 0
+    },
+    "energy_above_hull": {
+     "precision": 0.0,
+     "recall": 0.0,
+     "f1": 0.0,
+     "tp": 0,
+     "fp": 0,
+     "fn": 2
+    },
+    "formation_energy": {
+     "precision": 0.0,
+     "recall": 0.0,
+     "f1": 0.0,
+     "tp": 0,
+     "fp": 1,
+     "fn": 1
+    },
+    "ionic_conductivity": {
+     "precision": 0.909,
+     "recall": 0.625,
+     "f1": 0.741,
+     "tp": 10,
+     "fp": 1,
+     "fn": 6
+    },
+    "power_conversion_efficiency": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 2,
+     "fp": 0,
+     "fn": 0
+    },
+    "shear_modulus": {
+     "precision": 0.0,
+     "recall": 0.0,
+     "f1": 0.0,
+     "tp": 0,
+     "fp": 0,
+     "fn": 1
+    }
+   },
+   "model": "none"
+  },
+  "llm": {
+   "overall": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "tp": 64,
+    "fp": 0,
+    "fn": 0
+   },
+   "value_accuracy": 1.0,
+   "negative_items": 6,
+   "negative_items_with_false_alarms": 0,
+   "per_property": {
+    "activation_energy": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 4,
+     "fp": 0,
+     "fn": 0
+    },
+    "bandgap": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 24,
+     "fp": 0,
+     "fn": 0
+    },
+    "bulk_modulus": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 2,
+     "fp": 0,
+     "fn": 0
+    },
+    "capacity": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 4,
+     "fp": 0,
+     "fn": 0
+    },
+    "critical_temperature": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 3,
+     "fp": 0,
+     "fn": 0
+    },
+    "density": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 3,
+     "fp": 0,
+     "fn": 0
+    },
+    "electrochemical_stability_window": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 2,
+     "fp": 0,
+     "fn": 0
+    },
+    "energy_above_hull": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 2,
+     "fp": 0,
+     "fn": 0
+    },
+    "formation_energy": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 1,
+     "fp": 0,
+     "fn": 0
+    },
+    "ionic_conductivity": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 16,
+     "fp": 0,
+     "fn": 0
+    },
+    "power_conversion_efficiency": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 2,
+     "fp": 0,
+     "fn": 0
+    },
+    "shear_modulus": {
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0,
+     "tp": 1,
+     "fp": 0,
+     "fn": 0
+    }
+   },
+   "model": "openai/gpt-oss-120b"
+  }
+ }
+}

@@ -208,3 +208,10 @@ async def test_twelve_chunks_take_three_calls() -> None:
 
     await ExtractionAgent(Counting(), FakeMP()).run(state_with(*[chunk(f"p{i}_0", arxiv=f"p{i}") for i in range(12)]))
     assert Counting.calls == 3
+
+
+async def test_latex_formatting_from_abstracts_is_cleaned_before_validation() -> None:
+    record = raw(material_name="Li$_{7}$La$_{3}$Zr$_{2}$O$_{12}$", material_formula="Li$_{7}$La$_{3}$Zr$_{2}$O$_{12}$")
+    out = await ExtractionAgent(FakeLLM([record]), FakeMP()).run(state_with(chunk()))
+    rec = out["extracted_properties"][0]
+    assert rec["material_formula"] == "Li7La3Zr2O12" and rec["material_name"] == "Li7La3Zr2O12"

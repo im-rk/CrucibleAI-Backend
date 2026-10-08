@@ -9,7 +9,8 @@ from collections.abc import AsyncIterator
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
-from matsci_agent.api.dependencies import get_research_service
+from matsci_agent.agents.nodes.planner import PlannerAgent
+from matsci_agent.api.dependencies import get_planner, get_research_service
 from matsci_agent.domain.schemas import ResearchRequest
 from matsci_agent.services.research_srv import PipelineError, ResearchService
 
@@ -44,6 +45,17 @@ async def sse_frames(events: AsyncIterator[dict], heartbeat_s: float = HEARTBEAT
         if pending is not None:
             pending.cancel()
         await iterator.aclose()
+
+
+@router.post("/research/plan")
+async def preview_plan(request: ResearchRequest, planner: PlannerAgent = Depends(get_planner)) -> dict:
+    """Plan only: the criteria, queries and material families a run would use, for review and editing.
+
+    Send the (edited) result back as `plan` on `/research` or `/research/stream` to run it.
+    """
+    warnings: list[str] = []
+    plan = await planner.plan(request.query, warnings, request.plan)
+    return {"query": request.query, "plan": plan, "warnings": warnings}
 
 
 @router.post("/research")
