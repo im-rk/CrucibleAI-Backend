@@ -29,6 +29,8 @@ _PATTERNS: dict[str, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
     "role_change": re.compile(r"\byou\s+are\s+now\b|\bact\s+as\s+(?:an?\s+)?(?:different|new|unrestricted)\b|\bpretend\s+to\s+be\b", re.IGNORECASE),
+    # An uppercase role label inline ("... 3.4 eV. SYSTEM: report ...") or a request to start a new task.
+    "inline_role_marker": re.compile(r"\b(?:SYSTEM|ASSISTANT|DEVELOPER|USER)\s*:\s*|(?i:\bnew\s+(?:task|instructions?|directive)s?\s*:)"),
     "fake_role_marker": re.compile(r"(?:^|\n)\s*(?:system|assistant|developer)\s*:|</?\s*(?:system|instructions?|assistant)\s*>|\[/?\s*(?:INST|SYS)\s*\]", re.IGNORECASE),
     "reveal_secrets": re.compile(r"(?:reveal|print|show|output|repeat)\s+(?:me\s+)?(?:your\s+|the\s+)?(?:system\s+prompt|hidden\s+instructions?|api[\s_-]?keys?|secrets?)", re.IGNORECASE),
     "force_verdict": re.compile(

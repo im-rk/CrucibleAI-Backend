@@ -1,1 +1,1 @@
-{"property": "band_gap", "n_samples": 1500, "cv_r2": 0.6835055792471625, "cv_rmse": 0.9303570881612653, "source": "materials_project", "n_features": 132}
+{"property": "band_gap", "n_samples": 1500, "cv_r2": 0.7286948176138085, "cv_rmse": 0.8613817898730337, "source": "materials_project", "n_features": 132, "conformal_q90": 1.346498113256586, "kernel": "laplacian"}

@@ -42,6 +42,13 @@ async def main() -> None:
     DOC.parent.mkdir(exist_ok=True)
     DOC.write_text(suite.render_markdown(suite.load()), encoding="utf-8")
     print(f"Wrote {suite.RESULTS} and {DOC}")
+    # An invariant violation is always a bug (see evaluation/e2e_eval.py), so it fails the run (and CI).
+    bad = [
+        f"{name}: {case['goal'][:60]}: {[c['name'] for c in case['failed_invariants']]}"
+        for name in ("e2e_heuristic", "e2e_llm") for case in results.get(name, {}).get("cases", []) if case["failed_invariants"]
+    ]
+    if bad:
+        sys.exit("Invariant violations: " + "; ".join(bad))
 
 
 if __name__ == "__main__":

@@ -75,13 +75,15 @@ def test_a_report_must_say_how_it_was_produced() -> None:
 
 
 def test_case_evaluation_scores_expectations_and_efficiency() -> None:
-    row = evaluate_case(GOOD, {"goal": "g", "expect_any": ["AlN", "MgO"]})
+    row = evaluate_case(GOOD, {"goal": "g", "expect_qualified": True})
     assert row["expected_hit"] is True and row["qualified"] == ["AlN"] and row["llm_calls"] == 3 and row["duration_s"] == 4.2
-    assert evaluate_case(GOOD, {"goal": "g", "expect_any": ["Si"]})["expected_hit"] is False
-    assert evaluate_case(GOOD, {"goal": "g", "expect_any": []})["expected_hit"] is None
+    nothing = {**GOOD, "candidates": [c for c in GOOD["candidates"] if c["status"] != "qualified"]}
+    assert evaluate_case(nothing, {"goal": "g", "expect_qualified": True})["expected_hit"] is False
+    assert evaluate_case(GOOD, {"goal": "g", "expect_qualified": None})["expected_hit"] is None
 
 
 def test_the_summary_averages_over_cases() -> None:
-    rows = [evaluate_case(GOOD, {"goal": "a", "expect_any": ["AlN"]}), evaluate_case(GOOD, {"goal": "b", "expect_any": ["Si"]})]
+    nothing = {**GOOD, "candidates": []}
+    rows = [evaluate_case(GOOD, {"goal": "a", "expect_qualified": True}), evaluate_case(nothing, {"goal": "b", "expect_qualified": True})]
     s = summarise(rows)
     assert s["invariant_pass_rate"] == 1.0 and s["task_success_rate"] == 0.5 and s["mean_grounding_score"] == 1.0

@@ -62,6 +62,13 @@ Extract every material property value reported in these passages. For each one r
   needed interpretation, "low" if uncertain
 - excerpt: the exact sentence the value came from
 
+Rules:
+- Report only values measured, computed or claimed by the paper itself. Ignore values the passage attributes to
+  earlier work ("previous reports gave", "as reported in Ref. 12", "compared with ...").
+- property_name meanings: formation_energy is the energy released when a compound forms from its elements;
+  energy_above_hull is its distance in energy above the stable phases (a stability measure, small values mean stable);
+  bandgap is the electronic gap; ionic_conductivity is ion transport, not thermal or electrical conductivity.
+
 If the passages report no property values, return an empty list."""
 
 CRITERIA_SYSTEM = (

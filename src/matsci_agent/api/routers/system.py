@@ -30,7 +30,7 @@ async def health_check(
         "app_name": settings.app_name,
         "environment": settings.environment,
         "vector_store_chunks": stats["total_chunks"],
-        "krr_engine": "Kernel Ridge Regression (RBF kernel)",
+        "krr_engine": "Kernel Ridge Regression (Laplacian kernel)",
         "materials_project_api": (
             "live API" if mode["materials_project"] == "live" else "offline reference table (no API key)"
         ),

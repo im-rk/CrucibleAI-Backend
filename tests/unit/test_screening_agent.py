@@ -238,3 +238,21 @@ async def test_class_level_names_are_not_screened_as_candidates() -> None:
     names = {c["formula"] or c["name"] for c in out["screened_candidates"]}
     assert names == {"Li10GeP2S12", "LLZO"}
     assert any("class of materials" in w for w in out["warnings"])
+
+
+async def test_the_database_is_consulted_when_the_literature_has_no_material_that_meets_a_band_gap_goal() -> None:
+    """Three literature materials, none above 5 eV: the old rule (fewer than 3 materials) never seeded."""
+    records = [rec(f, "bandgap", gap, "eV", source=f"p{i}") for i, (f, gap) in enumerate([("GaAs", 1.4), ("Si", 1.1), ("CdTe", 1.5)])]
+    mp = FakeMP(online=False, rows=[{"formula": "AlN", "bandgap_eV": 6.2, "material_id": "offline-reference", "source": "offline"}])
+    out = await ScreeningAgent(FakeLLM(), FakeKRR(), mp).run(run_state("band gap above 5 eV", records))
+
+    aln = next(c for c in out["screened_candidates"] if c["formula"] == "AlN")
+    assert aln["status"] == "qualified" and aln["origin"] == "database"
+    assert any("database band-gap screen" in w for w in out["warnings"])
+
+
+async def test_the_database_is_not_consulted_when_enough_literature_materials_already_qualify() -> None:
+    records = [rec(f, "bandgap", gap, "eV", source=f"p{i}") for i, (f, gap) in enumerate([("AlN", 6.2), ("MgO", 7.8), ("Al2O3", 8.8)])]
+    mp = FakeMP(online=False, rows=[{"formula": "SiO2", "bandgap_eV": 9.0, "material_id": "x", "source": "s"}])
+    out = await ScreeningAgent(FakeLLM(), FakeKRR(), mp).run(run_state("band gap above 5 eV", records))
+    assert "SiO2" not in {c["formula"] for c in out["screened_candidates"]}

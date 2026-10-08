@@ -105,3 +105,31 @@ def test_reranker_falls_back_when_model_cannot_load() -> None:
         reranker = CrossEncoderReranker("missing-model")
         assert reranker.rerank("q", chunks, top_k=1) == chunks[:1]
         assert reranker.rerank("q", chunks, top_k=2) == chunks  # no retry storm, still a no-op
+
+
+def test_weighted_fusion_lets_one_list_outrank_the_other() -> None:
+    from matsci_agent.infrastructure.retrieval.hybrid_search import rrf_merge
+
+    dense = [{"id": "a"}, {"id": "b"}]
+    keyword = [{"id": "b"}, {"id": "a"}]
+    assert [c["id"] for c in rrf_merge(dense, keyword)][:2] in (["a", "b"], ["b", "a"])  # a tie with equal weights
+    assert rrf_merge(dense, keyword, weights=(1.0, 3.0))[0]["id"] == "b"  # the keyword list now wins
+    assert rrf_merge(dense, keyword, weights=(3.0, 1.0))[0]["id"] == "a"
+
+
+def test_hybrid_search_applies_its_keyword_weight() -> None:
+    from matsci_agent.infrastructure.retrieval.hybrid_search import HybridSearch
+
+    class Dense:
+        def search(self, query, n_results, deduplicate_papers):
+            return [{"id": "dense_top", "text": "x", "metadata": {}, "similarity": 0.9}, {"id": "kw_top", "text": "x", "metadata": {}, "similarity": 0.5}]
+
+        def similarities(self, query, ids):
+            return {i: 0.1 for i in ids}
+
+    class Keyword:
+        def search(self, query, n_results):
+            return [{"id": "kw_top", "text": "x", "metadata": {}}, {"id": "dense_top", "text": "x", "metadata": {}}]
+
+    assert HybridSearch(Dense(), bm25=Keyword(), bm25_weight=1.0).search("q", 2)[0]["id"] == "dense_top"
+    assert HybridSearch(Dense(), bm25=Keyword(), bm25_weight=4.0).search("q", 2)[0]["id"] == "kw_top"

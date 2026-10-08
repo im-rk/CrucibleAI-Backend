@@ -64,6 +64,9 @@ class Settings(BaseSettings):
     pinecone_region: str = Field(default="us-east-1", alias="PINECONE_REGION")
 
     # Retrieval tuning (hybrid BM25 + semantic search, optional cross-encoder rerank).
+    # Weight of the keyword (BM25) list in hybrid fusion. 2.0 beat equal weights on every retrieval benchmark
+    # task (docs/EVALUATION.md); raise it for keyword-style queries, lower it for conversational ones.
+    bm25_weight: float = Field(default=2.0, alias="BM25_WEIGHT")
     reranker_enabled: bool = Field(default=False, alias="RERANKER_ENABLED")
     reranker_model: str = Field(
         default="cross-encoder/ms-marco-MiniLM-L-6-v2", alias="RERANKER_MODEL"

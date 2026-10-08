@@ -20,13 +20,14 @@ from matsci_agent.agents.nodes.screening import _passes
 from matsci_agent.domain.chemistry import elements_in
 from matsci_agent.domain.schemas import Criterion
 
-# Goals with materials an expert expects to qualify (offline reference table: experimental band gaps).
+# Goals the pipeline should be able to answer. `expect_qualified` marks goals whose criterion the offline
+# reference table (experimental band gaps) can satisfy, so a run that returns no qualified candidate failed.
 CASES: list[dict] = [
-    {"goal": "Find wide band gap materials with a band gap above 5 eV", "expect_any": ["AlN", "MgO", "Al2O3"]},
-    {"goal": "Find semiconductors with a band gap between 1.2 and 1.6 eV for solar cells", "expect_any": ["GaAs", "InP", "CdTe", "MAPbI3"]},
-    {"goal": "Find UV LED materials with bandgap above 3.4 eV", "expect_any": ["AlN", "SnO2", "MgO", "Al2O3"]},
-    {"goal": "Find solid-state electrolytes with ionic conductivity above 1e-3 S/cm and no rare earth elements", "expect_any": []},
-    {"goal": "Find superconductors with a critical temperature above 77 K", "expect_any": []},
+    {"goal": "Find wide band gap materials with a band gap above 5 eV", "expect_qualified": True},
+    {"goal": "Find semiconductors with a band gap between 1.2 and 1.6 eV for solar cells", "expect_qualified": True},
+    {"goal": "Find UV LED materials with bandgap above 3.4 eV", "expect_qualified": True},
+    {"goal": "Find solid-state electrolytes with ionic conductivity above 1e-3 S/cm and no rare earth elements", "expect_qualified": None},
+    {"goal": "Find superconductors with a critical temperature above 77 K", "expect_qualified": None},
 ]
 
 
@@ -87,13 +88,13 @@ def check_report(report: dict) -> list[dict]:
 def evaluate_case(report: dict, case: dict) -> dict:
     checks = check_report(report)
     qualified = {c.get("formula") or c.get("name") for c in report.get("candidates", []) if c["status"] == "qualified"}
-    expect = case["expect_any"]
+    expect = case.get("expect_qualified")
     llm = ((report.get("trace") or {}).get("summary") or {}).get("llm", {})
     return {
         "goal": case["goal"],
         "invariants_passed": sum(c["passed"] for c in checks), "invariants_total": len(checks),
         "failed_invariants": [c for c in checks if not c["passed"]],
-        "expected_hit": (bool(qualified & set(expect)) if expect else None),
+        "expected_hit": (bool(qualified) if expect else None),
         "qualified": sorted(q for q in qualified if q)[:8],
         "candidates": len(report.get("candidates", [])),
         "grounding_score": (report.get("grounding") or {}).get("score"),

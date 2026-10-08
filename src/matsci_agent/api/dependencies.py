@@ -60,7 +60,7 @@ def get_hybrid_search() -> HybridSearch:
     )
     # BM25 needs every document; stores that cannot list them (Pinecone) get semantic-only search.
     bm25 = BM25Index(store) if getattr(store, "supports_listing", True) else None
-    return HybridSearch(store, bm25=bm25, reranker=reranker)
+    return HybridSearch(store, bm25=bm25, reranker=reranker, bm25_weight=settings.bm25_weight)
 
 
 @lru_cache(maxsize=1)

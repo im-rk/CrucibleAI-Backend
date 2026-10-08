@@ -43,3 +43,7 @@ jobs:
           uv run alembic check
       - name: Tests
         run: uv run pytest -q
+      - name: Evaluation smoke test (rule-based, no LLM key)
+        # Runs the extraction benchmark and whole-pipeline invariants on the shipped corpus; the invariants are
+        # also asserted by tests, this step proves the CLI and report generation work end to end.
+        run: uv run python scripts/run_evals.py --suite extraction,e2e

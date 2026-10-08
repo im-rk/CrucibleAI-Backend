@@ -191,7 +191,7 @@ class ScreeningAgent:
             key: "literature" if any(r.method == "literature" for r in recs) else "database"
             for key, recs in grouped.items()
         }
-        if len(grouped) < 3:
+        if self._needs_database_seed(criteria, grouped):
             seeded = await self._seed_from_database(criteria, grouped, origins, warnings)
             records.extend(seeded)
 
@@ -257,6 +257,18 @@ class ScreeningAgent:
         if generic:
             warnings.append(f"{generic} extracted value(s) described a class of materials rather than a specific one and were not screened.")
         return grouped
+
+    @staticmethod
+    def _needs_database_seed(criteria: list[Criterion], grouped: dict[str, list[PropertyRecord]]) -> bool:
+        """Too few materials from the literature: for a band-gap goal, too few that actually satisfy it."""
+        gap = next((c for c in criteria if c.kind == "numeric" and c.property_name == "bandgap"), None)
+        if gap is None:
+            return len(grouped) < 3
+        satisfying = {
+            key for key, recs in grouped.items()
+            if any(r.property_name == "bandgap" and r.value_numeric is not None and _passes(gap, r.value_numeric) for r in recs)
+        }
+        return len(satisfying) < 3
 
     async def _seed_from_database(self, criteria, grouped, origins, warnings) -> list[PropertyRecord]:
         """When the literature yields too few materials, add database matches for band-gap criteria."""

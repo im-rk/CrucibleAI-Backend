@@ -122,3 +122,12 @@ def test_the_heuristic_extractor_clears_a_quality_floor_and_never_fires_on_negat
     assert result["overall"]["precision"] >= 0.85 and result["overall"]["recall"] >= 0.5
     assert result["negative_items_with_false_alarms"] == 0
     assert result["value_accuracy"] >= 0.9
+
+
+def test_a_gold_record_accepts_its_listed_aliases() -> None:
+    gold = [{"id": "a", "records": [{"formula": "LLZO", "property": "ionic_conductivity", "value": 9e-4, "also": ["Li7La3Zr2O12"]}]}]
+    for name in ("LLZO", "Li7La3Zr2O12"):
+        out = ee.score(gold, {"a": [{"formula": name, "property": "ionic_conductivity", "value": 9e-4}]})
+        assert out["overall"]["tp"] == 1 and out["overall"]["fp"] == 0
+    wrong = ee.score(gold, {"a": [{"formula": "GaN", "property": "ionic_conductivity", "value": 9e-4}]})
+    assert wrong["overall"]["tp"] == 0

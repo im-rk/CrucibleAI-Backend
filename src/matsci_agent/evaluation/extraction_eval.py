@@ -23,6 +23,11 @@ def canon_formula(formula: str | None) -> str:
     return re.sub(r"[^a-z0-9().]", "", re.sub(r"^[^A-Za-z0-9]*(?:alpha|beta|gamma|[αβγ])[-\s]*", "", formula, flags=re.I).lower())
 
 
+def _names(gold_record: dict) -> set[str]:
+    """The names a gold record answers to: its formula plus accepted aliases (an abbreviation and what it stands for)."""
+    return {canon_formula(gold_record["formula"]), *(canon_formula(a) for a in gold_record.get("also", []))}
+
+
 def values_match(pred: float | None, gold: float) -> bool:
     if pred is None:
         return False
@@ -44,7 +49,7 @@ def score(gold_items: list[dict], predictions: dict[str, list[dict]]) -> dict:
         remaining = list(item["records"])
         for pred in predictions.get(item["id"], []):
             hit = next(
-                (g for g in remaining if canon_formula(g["formula"]) == canon_formula(pred["formula"]) and g["property"] == pred["property"]),
+                (g for g in remaining if canon_formula(pred["formula"]) in _names(g) and g["property"] == pred["property"]),
                 None,
             )
             if hit is not None:

@@ -678,7 +678,10 @@
      "as_written": {
       "value": "0.9",
       "unit": "mS/cm"
-     }
+     },
+     "also": [
+      "Li7La3Zr2O12"
+     ]
     }
    ],
    "note": "material given only as an abbreviation"
@@ -800,7 +803,11 @@
      "as_written": {
       "value": "200",
       "unit": "mAh/g"
-     }
+     },
+     "also": [
+      "LiNi0.8Mn0.1Co0.1O2",
+      "LiNi0.8Co0.1Mn0.1O2"
+     ]
     },
     {
      "formula": "LiFePO4",
