@@ -64,8 +64,11 @@ class ReportAgent:
         self.checker = checker
 
     async def run(self, state: ResearchState, config=None) -> dict:
-        hypotheses, grounding, warnings = await self.checker.check(state.get("hypotheses", []))
-        await emit(config, "grounding_check", is_grounded=grounding["is_grounded"], score=grounding["score"])
+        if state.get("grounding"):  # a verify node already checked (and possibly revised) the hypotheses
+            hypotheses, grounding, warnings = state.get("hypotheses", []), state["grounding"], []
+        else:
+            hypotheses, grounding, warnings = await self.checker.check(state.get("hypotheses", []))
+            await emit(config, "grounding_check", is_grounded=grounding["is_grounded"], score=grounding["score"])
         citations = build_citations({**state, "hypotheses": hypotheses})
         return {
             "hypotheses": hypotheses,

@@ -1,7 +1,7 @@
 """Kernel Ridge Regression for materials property prediction (Pilania et al., Sci. Rep. 2013).
 
-Compositional features (Magpie via matminer, or a small built-in fallback) feed an RBF-kernel
-KRR. Every trained model writes a metadata sidecar with its cross-validated error, so each
+Compositional features (Magpie via matminer, or a small built-in fallback) feed a kernel ridge
+regression (Laplacian kernel; see docs/MODEL_CARD.md for why it replaced the RBF kernel). Every trained model writes a metadata sidecar with its cross-validated error, so each
 prediction reports an uncertainty and a confidence tied to how it was actually trained.
 """
 
@@ -26,6 +26,10 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL_DIR = Path(__file__).resolve().parents[4] / "models"
 
+# Chosen by the benchmark in docs/MODEL_CARD.md: with nested cross-validation the Laplacian kernel scored
+# R2 0.729 against 0.683 for the RBF kernel (tuning the RBF's alpha and gamma did not help).
+KRR_PARAMS = {"kernel": "laplacian", "alpha": 0.1, "gamma": 0.01}
+
 # Names callers use -> the key models are stored under (Materials Project summary field names).
 PROPERTY_KEYS = {
     "band_gap": "band_gap",
@@ -38,8 +42,21 @@ UNITS = {"band_gap": "eV", "formation_energy_per_atom": "eV/atom", "density": "g
 NON_NEGATIVE = {"band_gap", "density"}
 
 
+def conformal_quantile(abs_residuals: np.ndarray, alpha: float = 0.1) -> float:
+    """Half-width of a (1 - alpha) prediction interval from held-out absolute errors (split conformal).
+
+    Uses the finite-sample correction ceil((n + 1)(1 - alpha)) / n, so the interval covers a new point with
+    probability at least 1 - alpha under exchangeability, whatever the error distribution.
+    """
+    n = len(abs_residuals)
+    if n == 0:
+        raise ValueError("Need at least one residual.")
+    rank = min(n, math.ceil((n + 1) * (1 - alpha)))
+    return float(np.sort(abs_residuals)[rank - 1])
+
+
 class KRRPropertyPredictor:
-    """Predicts material properties using Kernel Ridge Regression (RBF kernel)."""
+    """Predicts material properties using Kernel Ridge Regression."""
 
     # Basic elemental atomic numbers & electronegativities for the fallback feature vector
     ELEMENT_DB = {
@@ -74,10 +91,12 @@ class KRRPropertyPredictor:
                 from matminer.featurizers.composition import ElementProperty
                 from pymatgen.core import Composition
 
+                from matsci_agent.domain.chemistry import expand_abbreviations
+
                 if self._featurizer is None:
                     self._featurizer = ElementProperty.from_preset("magpie")
                     self._featurizer.set_n_jobs(1)
-                return np.array(self._featurizer.featurize(Composition(formula)), dtype=np.float64)
+                return np.array(self._featurizer.featurize(Composition(expand_abbreviations(formula))), dtype=np.float64)
             except ImportError:
                 self._featurizer_failed = True  # don't retry the import per formula
             except Exception:
@@ -118,10 +137,10 @@ class KRRPropertyPredictor:
         logger.info(f"Training KRR for {key} on {len(y)} samples ({source})...")
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
-        model = KernelRidge(kernel="rbf", alpha=0.1, gamma=0.01)
+        model = KernelRidge(**KRR_PARAMS)
         model.fit(X_scaled, y)
 
-        r2 = rmse = None
+        r2 = rmse = q90 = None
         folds = min(5, len(y))
         if folds >= 3:
             # Shuffled folds: training data can arrive sorted (MP returns formulas alphabetically),
@@ -130,10 +149,12 @@ class KRRPropertyPredictor:
             rmse = float(np.sqrt(np.mean((predicted - y) ** 2)))
             ss_tot = float(np.sum((y - np.mean(y)) ** 2))
             r2 = float(1 - np.sum((predicted - y) ** 2) / ss_tot) if ss_tot > 0 else None
+            # Out-of-fold errors are honest held-out errors, so their quantile calibrates the interval.
+            q90 = conformal_quantile(np.abs(predicted - y), 0.1)
 
         meta = {
             "property": key, "n_samples": int(len(y)), "cv_r2": r2, "cv_rmse": rmse,
-            "source": source, "n_features": int(X.shape[1]),
+            "source": source, "n_features": int(X.shape[1]), "conformal_q90": q90, "kernel": KRR_PARAMS["kernel"],
         }
         joblib.dump(model, self.model_dir / f"krr_{key}.joblib")
         joblib.dump(scaler, self.model_dir / f"scaler_{key}.joblib")
@@ -151,6 +172,13 @@ class KRRPropertyPredictor:
             raise ValueError(f"Unsupported property '{property_name}'. Choose from {sorted(set(PROPERTY_KEYS.values()))}.")
         if not api_key:
             raise ValueError("A Materials Project API key is required to train from Materials Project data.")
+        X, y, _ = self.fetch_materials_project_dataset(key, n_samples, api_key)
+        return self.train(X, y, key, source="materials_project")
+
+    def fetch_materials_project_dataset(
+        self, key: str, n_samples: int, api_key: str
+    ) -> tuple[np.ndarray, np.ndarray, list[str]]:
+        """Features, targets and formulas of a random sample of experimentally known, near-stable materials."""
         from mp_api.client import MPRester
 
         # Experimentally known, (near-)stable materials only; hypothetical polymorphs add noise. MP
@@ -181,16 +209,17 @@ class KRRPropertyPredictor:
         rng = np.random.default_rng(0)
         chosen = [candidates[i] for i in rng.permutation(len(candidates))[:n_samples]]
 
-        features, targets = [], []
+        features, targets, formulas = [], [], []
         for doc in chosen:
             target = getattr(doc, key, None)
             vec = self.compute_features(doc.formula_pretty) if target is not None else None
             if vec is not None and not np.any(np.isnan(vec)):
                 features.append(vec)
                 targets.append(float(target))
+                formulas.append(doc.formula_pretty)
         if len(targets) < 10:
             raise RuntimeError(f"Only {len(targets)} usable Materials Project samples; need at least 10.")
-        return self.train(np.array(features), np.array(targets), key, source="materials_project")
+        return np.array(features), np.array(targets), formulas
 
     def _train_baseline(self, property_name: str = "band_gap") -> None:
         """Train on the offline reference table. Only band gaps have reference data."""
@@ -243,16 +272,22 @@ class KRRPropertyPredictor:
         if key in NON_NEGATIVE:
             value = max(0.0, value)
         r2, rmse, n = meta.get("cv_r2"), meta.get("cv_rmse"), meta.get("n_samples")
+        q90 = meta.get("conformal_q90")
+        interval = None
+        if q90 is not None:
+            low = value - q90
+            interval = [round(max(0.0, low) if key in NON_NEGATIVE else low, 4), round(value + q90, 4)]
         from_mp = meta.get("source") == "materials_project"
         return {
             "formula": formula,
             "property": key,
             "predicted_value": round(value, 4),
             "unit": UNITS[key],
-            "method": "Kernel Ridge Regression (RBF kernel)",
+            "method": f"Kernel Ridge Regression ({str(meta.get('kernel', 'rbf')).title()} kernel)",
             "is_predicted": True,
             "confidence": "medium" if from_mp and r2 is not None and r2 >= 0.6 else "low",
             "uncertainty": None if rmse is None else round(rmse, 4),
+            "interval_90": interval,
             "cv_r2": None if r2 is None else round(r2, 3),
             "training_samples": n,
             "training_source": meta.get("source"),
@@ -260,6 +295,7 @@ class KRRPropertyPredictor:
                 f"Machine-learning estimate trained on {n} "
                 f"{'Materials Project materials' if from_mp else 'reference/custom data points'}"
                 f"{'' if rmse is None else f' (cross-validated RMSE ±{rmse:.2f} {UNITS[key]})'}. "
+                + (f"The 90% interval {interval[0]} to {interval[1]} {UNITS[key]} is calibrated on held-out errors. " if interval else "")
                 + (
                     # MP band gaps are PBE-DFT values, which underestimate measured gaps (~40%).
                     "It predicts the PBE-DFT band gap, which typically underestimates the measured gap. "

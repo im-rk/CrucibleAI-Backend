@@ -7,6 +7,8 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
+from matsci_agent.observability.trace import report_usage
+
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
@@ -91,6 +93,8 @@ class LLMClient:
         except ValidationError as exc:  # e.g. output truncated at max_tokens
             raise LLMError(f"Model output did not match {schema.__name__}: {exc}") from exc
 
+        usage = getattr(response, "usage", None)
+        report_usage(getattr(usage, "input_tokens", None), getattr(usage, "output_tokens", None))
         if response.parsed_output is None:
             raise LLMError(f"No parsable output (stop_reason={response.stop_reason})")
         return response.parsed_output

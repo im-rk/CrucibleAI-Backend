@@ -127,3 +127,40 @@ def test_has_rare_earth() -> None:
 def test_find_formulas_ignores_acronyms_and_words() -> None:
     text = "LLZO (Li7La3Zr2O12) and GaN show sharp CV peaks. The SOC of TiO2 electrodes rose."
     assert find_formulas(text) == ["Li7La3Zr2O12", "GaN", "TiO2"]
+
+
+def test_hybrid_perovskite_abbreviations_expand_to_real_compositions() -> None:
+    from matsci_agent.domain.chemistry import elements_in, expand_abbreviations, find_formulas
+
+    assert expand_abbreviations("MAPbI3") == "CH6NPbI3"
+    assert elements_in("MAPbI3") == {"C", "H", "N", "Pb", "I"} and elements_in("FAPbI3") == {"C", "H", "N", "Pb", "I"}
+    assert elements_in("Cs0.05FA0.8MA0.15PbI3") == {"Cs", "C", "H", "N", "Pb", "I"}
+    assert find_formulas("MAPbI3 films outperform FAPbBr3") == ["MAPbI3", "FAPbBr3"]
+
+
+def test_real_element_pairs_are_not_mistaken_for_abbreviations() -> None:
+    from matsci_agent.domain.chemistry import elements_in, expand_abbreviations
+
+    for formula in ("BAl", "FAs", "GaAs", "BaTiO3", "CaF2", "BeAl2O4"):
+        assert expand_abbreviations(formula) == formula
+    assert elements_in("GaAs") == {"Ga", "As"} and elements_in("LLZO") is None
+
+
+def test_latex_and_unicode_formulas_are_cleaned_to_plain_text() -> None:
+    from matsci_agent.domain.chemistry import clean_formula, elements_in
+
+    assert clean_formula("Li$_{7}$La$_{3}$Zr$_{2}$O$_{12}$") == "Li7La3Zr2O12"
+    assert clean_formula("Li\u2087La\u2083Zr\u2082O\u2081\u2082") == "Li7La3Zr2O12"
+    assert clean_formula("Ga$_2$O$_3$") == "Ga2O3"
+    assert clean_formula("(Li$_{2}$S)$_{x}$(P$_{2}$S$_{5}$)$_{1-x}$") == "(Li2S)x(P2S5)1-x"
+    assert elements_in(clean_formula("Li$_{7}$La$_{3}$Zr$_{2}$O$_{12}$")) == {"Li", "La", "Zr", "O"}
+
+
+def test_class_level_names_are_told_apart_from_specific_materials() -> None:
+    from matsci_agent.domain.chemistry import looks_generic
+
+    for generic in ("Lithium thiophosphates (LPS)", "sulfide electrolytes", "oxide ceramics", "candidate solid-state electrolyte composition",
+                    "(Li$_{2}$S)$_{x}$ glass", "the best performing sample of the whole series here"):
+        assert looks_generic(generic), generic
+    for specific in ("LLZO", "NMC811", "silicon carbide", "zinc oxide", "gallium nitride", "Li7La3Zr2O12"):
+        assert not looks_generic(specific), specific

@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from matsci_agent.agents import prompts
 from matsci_agent.agents.events import emit
-from matsci_agent.domain.chemistry import ELEMENTS, RARE_EARTH, elements_in
+from matsci_agent.domain.chemistry import ELEMENTS, RARE_EARTH, elements_in, looks_generic
 from matsci_agent.domain.schemas import Candidate, Criterion, CriterionResult, PropertyRecord
 from matsci_agent.domain.state import ResearchState
 from matsci_agent.domain.units import PROPERTIES, UNIT_PATTERNS, VALUE_PATTERN, normalise, parse_value
@@ -175,17 +175,23 @@ class ScreeningAgent:
 
     async def run(self, state: ResearchState, config=None) -> dict:
         goal = state["research_goal"]
-        records = [PropertyRecord(**r) for r in state.get("extracted_properties", [])]
+        # Predictions are recomputed on every pass, so a second pass (after the investigator added
+        # evidence) never sees the first pass's estimates as if they were data.
+        records = [PropertyRecord(**r) for r in state.get("extracted_properties", []) if not r.get("is_predicted")]
         warnings: list[str] = []
 
-        criteria = await self._parse_criteria(goal, warnings)
+        planned = state.get("criteria")
+        criteria = [Criterion(**c) for c in planned] if planned else await self._parse_criteria(goal, warnings)
         await emit(config, "screening_start", criteria_count=len(criteria), records=len(records))
         if not criteria:
             warnings.append("No screening criteria could be parsed from the goal; candidates are unscreened.")
 
         grouped = self._group(records, warnings)
-        origins = {key: "literature" for key in grouped}
-        if len(grouped) < 3:
+        origins = {
+            key: "literature" if any(r.method == "literature" for r in recs) else "database"
+            for key, recs in grouped.items()
+        }
+        if self._needs_database_seed(criteria, grouped):
             seeded = await self._seed_from_database(criteria, grouped, origins, warnings)
             records.extend(seeded)
 
@@ -236,16 +242,33 @@ class ScreeningAgent:
     @staticmethod
     def _group(records: list[PropertyRecord], warnings: list[str]) -> dict[str, list[PropertyRecord]]:
         grouped: dict[str, list[PropertyRecord]] = {}
-        unattributed = 0
+        unattributed = generic = 0
         for r in records:
             key = r.material_formula or (r.material_name if r.material_name.lower() != "unknown" else "")
             if not key:
                 unattributed += 1
                 continue
+            if not r.material_formula and looks_generic(key):
+                generic += 1  # a class of materials ("lithium thiophosphates"), not a candidate to screen
+                continue
             grouped.setdefault(key, []).append(r)
         if unattributed:
             warnings.append(f"{unattributed} extracted values could not be attributed to a named material.")
+        if generic:
+            warnings.append(f"{generic} extracted value(s) described a class of materials rather than a specific one and were not screened.")
         return grouped
+
+    @staticmethod
+    def _needs_database_seed(criteria: list[Criterion], grouped: dict[str, list[PropertyRecord]]) -> bool:
+        """Too few materials from the literature: for a band-gap goal, too few that actually satisfy it."""
+        gap = next((c for c in criteria if c.kind == "numeric" and c.property_name == "bandgap"), None)
+        if gap is None:
+            return len(grouped) < 3
+        satisfying = {
+            key for key, recs in grouped.items()
+            if any(r.property_name == "bandgap" and r.value_numeric is not None and _passes(gap, r.value_numeric) for r in recs)
+        }
+        return len(satisfying) < 3
 
     async def _seed_from_database(self, criteria, grouped, origins, warnings) -> list[PropertyRecord]:
         """When the literature yields too few materials, add database matches for band-gap criteria."""

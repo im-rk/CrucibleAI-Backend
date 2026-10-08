@@ -11,6 +11,8 @@ __pycache__
 !.env.example
 tests
 evaluation/results.json
+.cache
+data/cache
 chroma_db
 papers
 models

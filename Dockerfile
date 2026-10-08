@@ -31,6 +31,7 @@ COPY --chown=app:app pyproject.toml alembic.ini ./
 COPY --chown=app:app alembic ./alembic
 COPY --chown=app:app scripts ./scripts
 COPY --chown=app:app src ./src
+COPY --chown=app:app evaluation ./evaluation
 RUN mkdir -p chroma_db papers models .cache && chown -R app:app chroma_db papers models .cache
 
 USER app

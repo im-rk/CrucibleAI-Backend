@@ -18,6 +18,7 @@ from langgraph.graph import END, START, StateGraph
 
 from matsci_agent.agents.events import emit
 from matsci_agent.domain.state import ResearchState, initial_state
+from matsci_agent.observability.trace import current_agent, current_trace
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,9 @@ def _instrument(
 ) -> Node:
     async def node(state: ResearchState, config) -> dict:
         await emit(config, "agent_start", agent=label)
+        current_agent.set(label)
+        trace = current_trace.get()
+        trace_start = trace.now_ms() if trace else 0
         started = perf_counter()
         try:
             update = await fn(state, config)
@@ -43,6 +47,10 @@ def _instrument(
             }
             await emit(config, "agent_error", agent=label, message=str(exc))
         elapsed = int((perf_counter() - started) * 1000)
+        if trace:
+            failed = any(str(e.get("details", "")).startswith("Failed") for e in update.get("agent_log", []))
+            trace.record("agent", label, start_ms=trace_start, duration_ms=elapsed, agent=label,
+                         status="error" if failed else "ok")
         for entry in update.get("agent_log", []):
             entry.update(agent=label, duration_ms=elapsed)
         await emit(config, "agent_complete", agent=label, duration_ms=elapsed)
@@ -51,9 +59,14 @@ def _instrument(
     return node
 
 
-def build_research_graph(search_agent, extraction_agent, screening_agent, hypothesis_agent, report_agent):
+def build_research_graph(
+    search_agent, extraction_agent, screening_agent, hypothesis_agent, report_agent, *,
+    planner=None, investigator=None, verifier=None, reviser=None,
+):
     """Compile the workflow. Each argument is an object exposing `run(state, config)`."""
     graph = StateGraph(ResearchState)
+    if planner is not None:
+        graph.add_node("plan", _instrument("PlannerAgent", "PLANNING", planner.run))
     graph.add_node(
         "search",
         # A crashed search must still count as an attempt, or the retry edge would loop forever.
@@ -65,15 +78,35 @@ def build_research_graph(search_agent, extraction_agent, screening_agent, hypoth
     graph.add_node("hypothesise", _instrument("HypothesisAgent", "HYPOTHESIS", hypothesis_agent.run))
     graph.add_node("report", _instrument("ReportBuilder", "GROUNDING_CHECK", report_agent.run))
 
-    graph.add_edge(START, "search")
+    graph.add_edge(START, "plan" if planner is not None else "search")
+    if planner is not None:
+        graph.add_edge("plan", "search")
     graph.add_conditional_edges(
         "search",
         lambda state: "search" if search_agent.should_retry(state) else "extract",
         {"search": "search", "extract": "extract"},
     )
     graph.add_edge("extract", "screen")
-    graph.add_edge("screen", "hypothesise")
-    graph.add_edge("hypothesise", "report")
+    if investigator is not None:
+        graph.add_node("investigate", _instrument("InvestigatorAgent", "INVESTIGATION", investigator.run))
+        graph.add_edge("screen", "investigate")
+        graph.add_conditional_edges(
+            "investigate",
+            lambda state: "screen" if investigator.should_rescreen(state) else "hypothesise",
+            {"screen": "screen", "hypothesise": "hypothesise"},
+        )
+    else:
+        graph.add_edge("screen", "hypothesise")
+    if verifier is not None and reviser is not None:
+        graph.add_node("verify", _instrument("CriticAgent", "VERIFICATION", verifier.run))
+        graph.add_node("revise", _instrument("ReviserAgent", "REVISION", reviser.run))
+        graph.add_edge("hypothesise", "verify")
+        graph.add_conditional_edges(
+            "verify", lambda state: "revise" if verifier.will_revise(state) else "report", {"revise": "revise", "report": "report"}
+        )
+        graph.add_edge("revise", "verify")
+    else:
+        graph.add_edge("hypothesise", "report")
     graph.add_edge("report", END)
     return graph.compile()
 

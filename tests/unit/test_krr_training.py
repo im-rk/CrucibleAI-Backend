@@ -138,3 +138,46 @@ def test_cross_validation_is_shuffled_so_sorted_data_is_scored_fairly(predictor)
     first = predictor.train(X, y, "band_gap")
     second = predictor.train(X, y, "band_gap")
     assert first == second  # deterministic (fixed shuffle seed)
+
+
+# ---- calibrated prediction intervals (split conformal) -----------------------------------------------
+
+
+def test_the_conformal_quantile_uses_the_finite_sample_correction() -> None:
+    from matsci_agent.infrastructure.ml.krr import conformal_quantile
+
+    residuals = np.arange(1.0, 10.0)  # 1..9
+    assert conformal_quantile(residuals, 0.1) == 9.0  # ceil(10 * 0.9) = 9th smallest
+    assert conformal_quantile(residuals, 0.5) == 5.0  # ceil(10 * 0.5) = 5th smallest
+    assert conformal_quantile(np.array([2.0]), 0.1) == 2.0  # one point: the rank is capped at n
+    with pytest.raises(ValueError):
+        conformal_quantile(np.array([]), 0.1)
+
+
+def test_a_trained_model_reports_a_90_percent_interval_around_its_estimate(predictor) -> None:
+    out = predictor.predict("GaN", "band_gap")
+    low, high = out["interval_90"]
+    assert low <= out["predicted_value"] <= high and low >= 0  # a band gap cannot be negative
+    assert predictor.meta["band_gap"]["conformal_q90"] > 0
+    assert "calibrated" in out["note"]
+
+
+def test_the_interval_covers_new_points_at_about_the_promised_rate() -> None:
+    """Train on noisy synthetic data with a known noise level and check coverage on fresh points."""
+    from sklearn.kernel_ridge import KernelRidge
+    from sklearn.model_selection import KFold, cross_val_predict
+
+    from matsci_agent.infrastructure.ml.krr import conformal_quantile
+
+    rng = np.random.default_rng(3)
+    X = rng.uniform(-2, 2, size=(1200, 4))
+    y = np.sin(X[:, 0]) + 0.5 * X[:, 1] + rng.normal(0, 0.3, size=1200)
+    train, fresh = slice(0, 800), slice(800, 1200)
+
+    model = KernelRidge(kernel="rbf", alpha=0.1, gamma=0.2)
+    oof = cross_val_predict(model, X[train], y[train], cv=KFold(5, shuffle=True, random_state=0))
+    q = conformal_quantile(np.abs(oof - y[train]), 0.1)
+    model.fit(X[train], y[train])
+    coverage = float(np.mean(np.abs(model.predict(X[fresh]) - y[fresh]) <= q))
+
+    assert 0.86 <= coverage <= 0.96  # promised 0.90; finite samples wobble a little

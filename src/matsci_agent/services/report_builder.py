@@ -70,6 +70,7 @@ def build_report(
     max_results: int,
     mode: dict[str, Any],
     duration_ms: int,
+    trace: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     candidates = state.get("screened_candidates", [])
     records = state.get("extracted_properties", [])
@@ -125,6 +126,10 @@ def build_report(
         "warnings": warnings,
         "search_queries": state.get("search_queries", []),
         "retrieval_attempts": state.get("retry_count", 0) + 1,
+        "plan": state.get("plan") or None,
+        "investigation": state.get("investigation") or None,
+        "revisions": state.get("revision_count", 0),
         "mode": mode,
         "duration_ms": duration_ms,
+        "trace": trace,
     }

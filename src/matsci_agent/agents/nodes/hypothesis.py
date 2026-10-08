@@ -13,6 +13,7 @@ from matsci_agent.agents.events import emit
 from matsci_agent.domain.chemistry import elements_in
 from matsci_agent.domain.state import ResearchState
 from matsci_agent.infrastructure.llm.anthropic_client import LLMClient, LLMError
+from matsci_agent.security.guardrails import neutralize
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,7 @@ class HypothesisAgent:
         await emit(config, "hypotheses_generated", count=len(hypotheses), gaps=len(gaps))
         return {
             "hypotheses": hypotheses,
+            "evidence_index": evidence,
             "knowledge_gaps": gaps[:12],
             "warnings": warnings,
             "agent_log": [{
@@ -107,7 +109,7 @@ class HypothesisAgent:
             evidence[f"E{i}"] = {
                 "id": f"E{i}", "kind": "chunk", "ref": chunk["id"], "title": meta.get("title", ""),
                 "doi": meta.get("doi", ""), "source_id": meta.get("arxiv_id", ""),
-                "snippet": f"[{meta.get('title', 'paper')}] {chunk['text'][:300]}",
+                "snippet": neutralize(f"[{meta.get('title', 'paper')}] {chunk['text'][:300]}"),
             }
         wanted = {c["formula"] or c["name"] for c in top}
         picked = [r for r in records if (r["material_formula"] or r["material_name"]) in wanted]

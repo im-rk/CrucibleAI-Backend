@@ -11,6 +11,9 @@ from pydantic import BaseModel
 from matsci_agent.agents import prompts
 from matsci_agent.agents.events import emit
 from matsci_agent.domain.state import ResearchState
+from matsci_agent.observability.metrics import METRICS
+from matsci_agent.observability.trace import trace_span
+from matsci_agent.security.guardrails import scan, wrap_untrusted
 from matsci_agent.infrastructure.llm.anthropic_client import LLMClient, LLMError
 
 logger = logging.getLogger(__name__)
@@ -101,7 +104,7 @@ class SearchAgent:
         warnings: list[str] = []
 
         if not tried:
-            queries = await self._generate_queries(goal, warnings)
+            queries = list(state.get("planned_queries") or []) or await self._generate_queries(goal, warnings)
             await emit(config, "queries_generated", queries=queries)
         else:
             attempt += 1
@@ -111,12 +114,22 @@ class SearchAgent:
 
         found: list[dict] = []
         for query in queries:
-            found.extend(await asyncio.to_thread(self.search.search, query, pool_size))
+            with trace_span("retrieval", "hybrid_search", query=query[:100]) as span:
+                hits = await asyncio.to_thread(self.search.search, query, pool_size)
+                span["results"] = len(hits)
+            found.extend(hits)
         if tried and self.live_arxiv and self.arxiv is not None:
             found.extend(await self._live_abstracts(queries[-1], warnings))
 
         pool = {c["id"]: c for c in state.get("retrieved_chunks", [])}
         fresh = list({c["id"]: c for c in found if c["id"] not in pool}.values())
+        flagged = [c for c in fresh if scan(c["text"])]
+        if flagged:
+            METRICS.inc("injection_flags_total", len(flagged), source="retrieval")
+            warnings.append(
+                f"{len(flagged)} retrieved passage(s) contained instruction-like text (possible prompt injection); "
+                "it was neutralised before reaching the model."
+            )
         await emit(config, "papers_found", count=len(pool) + len(fresh), new=len(fresh))
 
         method, threshold = await self._score(goal, fresh, warnings)
@@ -147,6 +160,19 @@ class SearchAgent:
             "warnings": warnings,
             "agent_log": [{"step": "LITERATURE_SEARCH", "details": detail}],
         }
+
+    async def targeted_search(self, query: str, goal: str, *, n: int = 5, warnings: list[str]) -> list[dict]:
+        """One-off retrieval for a specific question: hybrid search plus live arXiv abstracts, best first."""
+        with trace_span("retrieval", "targeted_search", query=query[:100]) as span:
+            hits = await asyncio.to_thread(self.search.search, query, n)
+            if self.live_arxiv and self.arxiv is not None:
+                hits = hits + await self._live_abstracts(query, warnings, timeout_s=12)
+            span["results"] = len(hits)
+        unique = {c["id"]: c for c in hits}.values()
+        for chunk in unique:
+            chunk["relevance_score"] = round(heuristic_relevance(goal, chunk), 4)
+            chunk.setdefault("relevance_method", "heuristic")
+        return sorted(unique, key=lambda c: c["relevance_score"], reverse=True)[: n + 3]
 
     def should_retry(self, state: ResearchState) -> bool:
         """Conditional-edge predicate: too few relevant chunks and retries remain."""
@@ -239,7 +265,7 @@ class SearchAgent:
         return self.relevance_threshold if llm else HEURISTIC_THRESHOLD
 
     async def _score_batch(self, goal: str, batch: list[dict]) -> None:
-        passages = "\n\n".join(f"[{i}] {c['text'][:500]}" for i, c in enumerate(batch))
+        passages = "\n\n".join(f"[{i}] {wrap_untrusted(c['text'][:500])}" for i, c in enumerate(batch))
         async with self._semaphore:
             out = await self.llm.structured(
                 prompts.RELEVANCE_PROMPT.format(goal=goal, passages=passages),
@@ -255,10 +281,10 @@ class SearchAgent:
 
     # ---- live arXiv fallback ---------------------------------------------------------
 
-    async def _live_abstracts(self, query: str, warnings: list[str]) -> list[dict]:
+    async def _live_abstracts(self, query: str, warnings: list[str], timeout_s: float = 30) -> list[dict]:
         try:
             papers = await asyncio.wait_for(
-                asyncio.to_thread(self.arxiv.search_abstracts, query, 5), timeout=30
+                asyncio.to_thread(self.arxiv.search_abstracts, query, 5), timeout=timeout_s
             )
         except Exception as exc:
             warnings.append(f"Live arXiv search unavailable: {exc}")

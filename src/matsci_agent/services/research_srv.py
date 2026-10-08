@@ -10,7 +10,10 @@ from time import perf_counter
 from typing import Any
 
 from matsci_agent.agents.orchestrator import initial_state, run_config
+from matsci_agent.core.config import settings
 from matsci_agent.domain.schemas import ResearchRequest
+from matsci_agent.observability.metrics import METRICS
+from matsci_agent.observability.trace import RunTrace, current_trace
 from matsci_agent.services.report_builder import build_report
 
 logger = logging.getLogger(__name__)
@@ -31,10 +34,12 @@ class ResearchService:
         persistence=None,
         timeout_s: float = 300,
         max_concurrent: int = 2,
+        reports=None,
     ) -> None:
         self.graph = graph
         self.mode = mode
         self.persistence = persistence
+        self.reports = reports
         self.timeout_s = timeout_s
         self._slots = asyncio.Semaphore(max_concurrent)
 
@@ -47,7 +52,10 @@ class ResearchService:
         async def emit(event: dict) -> None:
             await queue.put(event)
 
+        trace = RunTrace(session_id, llm_call_budget=settings.llm_max_calls_per_run)
+
         async def runner() -> None:
+            current_trace.set(trace)
             try:
                 async with self._slots:
                     started = perf_counter()
@@ -55,7 +63,7 @@ class ResearchService:
                         await self.persistence.start(session_id, request.query)
                     state = await asyncio.wait_for(
                         self.graph.ainvoke(
-                            initial_state(request.query, request.max_results), run_config(emit)
+                            initial_state(request.query, request.max_results, request.plan), run_config(emit)
                         ),
                         timeout=self.timeout_s,
                     )
@@ -63,17 +71,23 @@ class ResearchService:
                         state, session_id=session_id, query=request.query,
                         # recomputed: the LLM may have been disabled mid-run (e.g. no credits)
                         max_results=request.max_results, mode=self.mode(),
-                        duration_ms=int((perf_counter() - started) * 1000),
+                        duration_ms=int((perf_counter() - started) * 1000), trace=trace.to_dict(),
                     )
+                    METRICS.inc("runs_total", outcome="completed")
+                    METRICS.observe("run_seconds", report["duration_ms"] / 1000)
+                if self.reports is not None:
+                    self.reports.put(session_id, report)
                 if self.persistence:
                     await self.persistence.finish(session_id, report)
                 await queue.put({"event": "complete", "report": report})
             except asyncio.TimeoutError:
                 message = f"Research timed out after {self.timeout_s:.0f}s."
+                METRICS.inc("runs_total", outcome="timeout")
                 await self._record_failure(session_id, message)
                 await queue.put({"event": "error", "message": message})
             except Exception as exc:  # noqa: BLE001
                 logger.exception(f"Research run {session_id} failed")
+                METRICS.inc("runs_total", outcome="failed")
                 message = f"{type(exc).__name__}: {exc}"
                 await self._record_failure(session_id, message)
                 await queue.put({"event": "error", "message": message})

@@ -16,6 +16,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from matsci_agent.infrastructure.llm.anthropic_client import LLMError
+from matsci_agent.observability.trace import report_usage
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +121,8 @@ class GroqClient:
             body["reasoning_effort"] = "low"  # extraction and scoring do not need long reasoning; saves tokens
 
         data = (await self._post(body)).json()
+        usage = data.get("usage") or {}
+        report_usage(usage.get("prompt_tokens"), usage.get("completion_tokens"))
         choices = data.get("choices") or []
         if not choices:
             raise LLMError("Groq returned no answer")

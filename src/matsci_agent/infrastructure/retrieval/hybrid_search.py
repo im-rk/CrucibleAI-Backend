@@ -14,18 +14,20 @@ class SemanticStore(Protocol):
     def similarities(self, query: str, ids: list[str]) -> dict[str, float]: ...
 
 
-def rrf_merge(*ranked_lists: list[dict], k: int = 60) -> list[dict]:
+def rrf_merge(*ranked_lists: list[dict], k: int = 60, weights: tuple[float, ...] | None = None) -> list[dict]:
     """Reciprocal Rank Fusion over any number of ranked chunk lists (best first).
 
-    Each chunk scores sum(1 / (k + rank)) across the lists it appears in; fields from every
-    list a chunk appeared in are kept so callers see both `similarity` and `bm25_score`.
+    Each chunk scores sum(weight / (k + rank)) across the lists it appears in (weight 1 for every list
+    unless `weights` says otherwise); fields from every list a chunk appeared in are kept so callers
+    see both `similarity` and `bm25_score`.
     """
     scores: dict[str, float] = {}
     merged: dict[str, dict] = {}
-    for ranked in ranked_lists:
+    for position, ranked in enumerate(ranked_lists):
+        weight = weights[position] if weights else 1.0
         for rank, item in enumerate(ranked):
             chunk_id = item["id"]
-            scores[chunk_id] = scores.get(chunk_id, 0.0) + 1.0 / (k + rank + 1)
+            scores[chunk_id] = scores.get(chunk_id, 0.0) + weight / (k + rank + 1)
             merged.setdefault(chunk_id, {}).update(item)
     order = sorted(scores, key=scores.__getitem__, reverse=True)
     return [{**merged[i], "rrf_score": round(scores[i], 6)} for i in order]
@@ -40,11 +42,13 @@ class HybridSearch:
         bm25: BM25Index | None = None,
         reranker: CrossEncoderReranker | None = None,
         pool_size: int = 15,
+        bm25_weight: float = 1.0,
     ) -> None:
         self.vector_store = vector_store
         self.bm25 = bm25
         self.reranker = reranker
         self.pool_size = pool_size
+        self.bm25_weight = bm25_weight
 
     def search(self, query: str, n_results: int = 12) -> list[dict]:
         # Multiple chunks per paper are wanted here: extraction reads the Results sections.
@@ -52,7 +56,7 @@ class HybridSearch:
             query, n_results=self.pool_size, deduplicate_papers=False
         )
         keyword = self.bm25.search(query, n_results=self.pool_size) if self.bm25 else []
-        merged = rrf_merge(semantic, keyword)
+        merged = rrf_merge(semantic, keyword, weights=(1.0, self.bm25_weight))
 
         pool = merged[: max(self.pool_size, n_results)]
         if self.reranker is not None:

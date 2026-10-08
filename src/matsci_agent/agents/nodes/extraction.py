@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from matsci_agent.agents import prompts
 from matsci_agent.agents.events import emit
-from matsci_agent.domain.chemistry import elements_in, find_formulas
+from matsci_agent.domain.chemistry import clean_formula, elements_in, find_formulas
 from matsci_agent.domain.schemas import PropertyRecord
 from matsci_agent.domain.state import ResearchState
 from matsci_agent.domain.units import (
@@ -23,6 +23,7 @@ from matsci_agent.domain.units import (
     parse_value,
 )
 from matsci_agent.infrastructure.llm.anthropic_client import LLMClient, LLMError
+from matsci_agent.security.guardrails import wrap_untrusted
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +170,18 @@ class ExtractionAgent:
             "agent_log": [{"step": "EXTRACTION", "details": details}],
         }
 
+    async def extract_chunks(self, chunks: list[dict], warnings: list[str]) -> list[PropertyRecord]:
+        """Extract property records from `chunks` (no Materials Project cross-check, no de-duplication)."""
+        batches = [chunks[i : i + self.batch_size] for i in range(0, len(chunks), self.batch_size)]
+        outcomes = await asyncio.gather(*(self._extract_batch(b, warnings) for b in batches), return_exceptions=True)
+        records: list[PropertyRecord] = []
+        for batch, outcome in zip(batches, outcomes):
+            if isinstance(outcome, BaseException):
+                warnings.append(f"Skipped chunk {', '.join(c['id'] for c in batch)}: {type(outcome).__name__}: {outcome}")
+            else:
+                records.extend(outcome)
+        return self._dedupe(records)
+
     # ---- batched extraction -------------------------------------------------------------
 
     async def _extract_batch(self, batch: list[dict], warnings: list[str]) -> list[PropertyRecord]:
@@ -177,7 +190,7 @@ class ExtractionAgent:
             try:
                 passages = "\n\n".join(
                     f"[{i}] Paper: {c['metadata'].get('title', 'Unknown')} "
-                    f"(DOI: {c['metadata'].get('doi') or 'Unknown'})\n{c['text'][:MAX_CHUNK_CHARS]}"
+                    f"(DOI: {c['metadata'].get('doi') or 'Unknown'})\n{wrap_untrusted(c['text'][:MAX_CHUNK_CHARS])}"
                     for i, c in enumerate(batch)
                 )
                 async with self._semaphore:
@@ -201,9 +214,10 @@ class ExtractionAgent:
         meta = chunk["metadata"]
         numeric = raw.value_numeric if raw.value_numeric is not None else parse_value(raw.value_raw).value
         prop, numeric, unit, _ = normalise(raw.property_name, numeric, raw.unit)
-        formula = raw.material_formula if raw.material_formula and elements_in(raw.material_formula) else None
+        cleaned = clean_formula(raw.material_formula) if raw.material_formula else None
+        formula = cleaned if cleaned and elements_in(cleaned) else None
         return PropertyRecord(
-            material_name=raw.material_name,
+            material_name=clean_formula(raw.material_name),
             material_formula=formula,
             property_name=prop,
             value_raw=raw.value_raw,
