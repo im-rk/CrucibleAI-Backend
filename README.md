@@ -471,5 +471,5 @@ with the current Dockerfile has not been verified end to end.
 - Materials Project values use the ground state of each formula; the database seed considers experimentally known, non-radioactive
   structures only.
 
-Design documents behind the original plan: [`01_README.md`](01_README.md), [`02_SETUP_GUIDE.md`](02_SETUP_GUIDE.md),
-[`03_IMPLEMENTATION_PLAN.md`](03_IMPLEMENTATION_PLAN.md), [`MaterialsResearchAgent_PRD.md`](MaterialsResearchAgent_PRD.md).
+Design documents behind the original plan: [`01_README.md`](docs/01_README.md), [`02_SETUP_GUIDE.md`](docs/02_SETUP_GUIDE.md),
+[`03_IMPLEMENTATION_PLAN.md`](docs/03_IMPLEMENTATION_PLAN.md), [`MaterialsResearchAgent_PRD.md`](docs/MaterialsResearchAgent_PRD.md).

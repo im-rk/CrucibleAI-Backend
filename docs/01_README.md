@@ -130,7 +130,7 @@ Evaluated on 20 manually-curated materials science questions.
 
 ## Setup
 
-See `02_SETUP_GUIDE.md` for complete installation instructions.
+See `02_SETUP_GUIDE.md` (in this folder) for complete installation instructions.
 
 ## Implementation Plan
 
